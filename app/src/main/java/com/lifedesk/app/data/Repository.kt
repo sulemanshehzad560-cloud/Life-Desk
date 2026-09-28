@@ -52,6 +52,24 @@ class LifeRepository(private val dao: LifeDao) {
 
     suspend fun markUsed(item: LifeItem, today: LocalDate = LocalDate.now()) = dao.save(item.copy(lastUsed = today))
 
+    /**
+     * Removes the demo household that older versions could load ("Explore with sample data").
+     * Matches only the exact demo entries (title + provider/reference), so real items are untouched.
+     */
+    suspend fun removeLegacySampleData(): Int {
+        val demo = setOf(
+            "Car insurance|ABC Insurance", "Emirates NBD credit card|Emirates NBD", "Passport|AB1234567",
+            "Emirates ID|784-1990-1234567-1", "Vehicle registration|RTA", "Netflix|Netflix", "Adobe|Adobe",
+            "Gym membership|GymNation", "Cloud storage|Google One", "Streaming bundle|OSN+",
+            "DEWA electricity & water bill|DEWA", "Washing machine warranty|SuperTech Electronics",
+        )
+        val victims = dao.allItems().filter { i ->
+            "${i.title}|${i.provider}" in demo || "${i.title}|${i.referenceNumber}" in demo
+        }
+        victims.forEach { delete(it) }
+        return victims.size
+    }
+
     suspend fun delete(item: LifeItem) {
         item.imagePath?.let { File(it).delete() }
         dao.deletePricesFor(item.id)

@@ -184,6 +184,8 @@ fun SwipeItemRow(item: LifeItem, today: LocalDate, onClick: () -> Unit, onComple
     androidx.compose.material3.SwipeToDismissBox(
         state = state,
         backgroundContent = {
+            // Nothing behind the (translucent) card until the user actually swipes.
+            if (state.dismissDirection == androidx.compose.material3.SwipeToDismissBoxValue.Settled) return@SwipeToDismissBox
             val toEnd = state.dismissDirection == androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd
             Box(
                 Modifier.fillMaxWidth().padding(vertical = 5.dp).clip(RoundedCornerShape(20.dp))

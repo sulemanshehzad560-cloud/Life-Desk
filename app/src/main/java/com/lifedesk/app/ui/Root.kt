@@ -1,12 +1,39 @@
 package com.lifedesk.app.ui
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.lifedesk.app.ui.components.NeonBackground
+import com.lifedesk.app.ui.theme.Neon
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Subscriptions
+import androidx.compose.material.icons.outlined.DonutLarge
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -46,7 +73,7 @@ private val tabs = listOf(
     Tab("home", "Home", Icons.Outlined.Home),
     Tab("items", "Everything", Icons.Outlined.FolderOpen),
     Tab("scan", "Scan", Icons.Filled.CameraAlt),
-    Tab("subscriptions", "Money", Icons.Outlined.Subscriptions),
+    Tab("subscriptions", "Money", Icons.Outlined.DonutLarge),
     Tab("settings", "Settings", Icons.Outlined.Settings),
 )
 
@@ -79,21 +106,19 @@ fun LifeDeskRoot(vm: AppViewModel) {
         message?.let { snackbar.showSnackbar(it); vm.consumeMessage() }
     }
 
+    NeonBackground {
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbar) },
-        bottomBar = {
-            if (current in tabs.map { it.route }) {
-                NavigationBar {
-                    tabs.forEach { t ->
-                        NavigationBarItem(
-                            selected = current == t.route,
-                            onClick = { nav.goTab(t.route) },
-                            icon = { Icon(t.icon, contentDescription = t.label) },
-                            label = { Text(t.label) },
-                        )
-                    }
-                }
+        containerColor = Color.Transparent,
+        snackbarHost = {
+            SnackbarHost(snackbar) { data ->
+                androidx.compose.material3.Snackbar(
+                    data, containerColor = Neon.Surface2, contentColor = Neon.Text, actionColor = Neon.Cyan,
+                    shape = RoundedCornerShape(16.dp),
+                )
             }
+        },
+        bottomBar = {
+            if (current in tabs.map { it.route }) FloatingNavBar(current) { nav.goTab(it) }
         },
     ) { padding ->
         NavHost(
@@ -138,6 +163,7 @@ fun LifeDeskRoot(vm: AppViewModel) {
             composable("settings") { SettingsScreen(vm, nav) }
         }
     }
+    }
 
     val locked by vm.locked.collectAsStateWithLifecycle()
     if (locked) LockScreen(vm)
@@ -149,5 +175,55 @@ fun LifeDeskRoot(vm: AppViewModel) {
             title = { Text("Something went wrong") },
             text = { Text(failed.message) },
         )
+    }
+}
+
+
+/** Floating glass navigation bar with a raised gradient scan button in the middle. */
+@Composable
+private fun FloatingNavBar(current: String?, onSelect: (String) -> Unit) {
+    Box(
+        Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Row(
+            Modifier.fillMaxWidth().height(66.dp).clip(RoundedCornerShape(26.dp))
+                .background(Brush.verticalGradient(listOf(Neon.Surface2.copy(alpha = 0.96f), Neon.Surface.copy(alpha = 0.96f))))
+                .border(1.dp, Brush.linearGradient(listOf(Neon.Cyan.copy(alpha = 0.4f), Neon.Stroke, Neon.Violet.copy(alpha = 0.4f))), RoundedCornerShape(26.dp)),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            tabs.forEach { t ->
+                if (t.route == "scan") {
+                    Spacer(Modifier.weight(1f))
+                } else {
+                    val selected = current == t.route
+                    val tint by animateColorAsState(if (selected) Neon.Cyan else Neon.Muted, label = "tint")
+                    Column(
+                        Modifier.weight(1f).fillMaxHeight().clickable(
+                            interactionSource = remember { MutableInteractionSource() }, indication = null,
+                        ) { onSelect(t.route) },
+                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(t.icon, t.label, tint = tint, modifier = Modifier.size(22.dp))
+                        Text(t.label, fontSize = 10.sp, color = tint, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+                        Box(
+                            Modifier.padding(top = 3.dp).size(width = if (selected) 16.dp else 0.dp, height = 3.dp)
+                                .clip(RoundedCornerShape(2.dp)).background(Neon.Primary),
+                        )
+                    }
+                }
+            }
+        }
+        // Raised scan button
+        Box(
+            Modifier.padding(bottom = 22.dp).size(66.dp)
+                .drawBehind { drawCircle(Brush.radialGradient(listOf(Neon.Cyan.copy(alpha = 0.5f), Color.Transparent)), radius = size.minDimension * 0.75f) }
+                .clip(CircleShape).background(Neon.Primary)
+                .border(3.dp, Neon.Bg, CircleShape)
+                .clickable { onSelect("scan") },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Filled.CameraAlt, "Scan", tint = Color(0xFF06101E), modifier = Modifier.size(28.dp))
+        }
     }
 }

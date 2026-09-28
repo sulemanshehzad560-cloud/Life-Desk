@@ -2,6 +2,21 @@ package com.lifedesk.app.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.sp
+import com.lifedesk.app.ui.components.GlassCard
+import com.lifedesk.app.ui.components.GradientButton
+import com.lifedesk.app.ui.components.RingGauge
+import com.lifedesk.app.ui.components.SectionHeader
+import com.lifedesk.app.ui.theme.Mono
+import com.lifedesk.app.ui.theme.Neon
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
@@ -90,16 +105,23 @@ fun EditScreen(vm: AppViewModel, nav: NavHostController) {
     fun opt(s: String) = s.ifBlank { null }
 
     Scaffold(
+        containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text(if (item.id == 0L) "Review & save" else "Edit") },
+                colors = androidx.compose.material3.TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                title = {
+                    Column {
+                        Text(if (d.scanned) "EXTRACTION RESULT" else "EDITOR", style = MaterialTheme.typography.labelSmall, color = Neon.Cyan)
+                        Text(if (item.id == 0L) "Review & save" else "Edit item", color = Neon.Text)
+                    }
+                },
                 navigationIcon = { IconButton(onClick = ::close) { Icon(Icons.Outlined.Close, "Cancel") } },
                 actions = {
                     TextButton(onClick = {
                         vm.saveDraft(item.copy(amount = amountText.replace(",", "").toDoubleOrNull())) { id ->
                             nav.navigate("item/$id") { popUpTo("home") }
                         }
-                    }) { Text("Save", fontWeight = FontWeight.Bold) }
+                    }) { Text("SAVE", fontWeight = FontWeight.Black, color = Neon.Cyan, letterSpacing = 1.sp) }
                 },
             )
         },
@@ -109,17 +131,32 @@ fun EditScreen(vm: AppViewModel, nav: NavHostController) {
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (bitmap != null) {
-                Card(shape = RoundedCornerShape(16.dp)) {
-                    Image(bitmap.asImageBitmap(), "Document photo", Modifier.fillMaxWidth().height(180.dp), contentScale = ContentScale.Crop)
+                Box(
+                    Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(20.dp))
+                        .border(1.dp, Brush.linearGradient(listOf(Neon.Cyan, Neon.Violet)), RoundedCornerShape(20.dp)),
+                ) {
+                    Image(bitmap.asImageBitmap(), "Document photo", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Neon.Bg.copy(alpha = 0.8f)))))
                 }
             }
             d.confidence?.let { c ->
                 val (msg, color) = when {
-                    c >= 0.8 -> "✅ I've read this document. Check the details below and save." to SavingsGreen
-                    c >= 0.4 -> "🔎 I found some details — please fill in anything missing." to urgencyColor(Urgency.UPCOMING)
-                    else -> "✍️ I couldn't read much from this photo. Fill in the details and the photo stays attached." to urgencyColor(Urgency.UPCOMING)
+                    c >= 0.8 -> "Document understood. Check the details and save." to Neon.Green
+                    c >= 0.4 -> "Partial read. Fill in anything missing." to Neon.Amber
+                    else -> "Couldn't read much. Fill it in — the photo stays attached." to Neon.Red
                 }
-                Text(msg, color = color, fontWeight = FontWeight.Medium)
+                GlassCard(Modifier.fillMaxWidth(), glow = color, padding = 12.dp) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RingGauge(c.toFloat(), size = 54.dp, stroke = 5.dp, colors = listOf(color, Neon.Cyan, color)) {
+                            Text("${(c * 100).toInt()}%", fontFamily = Mono, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Neon.Text)
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("AI CONFIDENCE", style = MaterialTheme.typography.labelSmall, color = Neon.Muted)
+                            Text(msg, color = color, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                }
             }
 
             val amount = amountText.replace(",", "").toDoubleOrNull()
@@ -128,7 +165,7 @@ fun EditScreen(vm: AppViewModel, nav: NavHostController) {
                 val pct = percentChange(prev.amount, amount)
                 val diff = amount - prev.amount
                 val up = diff > 0
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)) {
+                GlassCard(Modifier.fillMaxWidth(), glow = if (up) Neon.Red else Neon.Green, padding = 0.dp) {
                     Column(Modifier.padding(14.dp)) {
                         Text(
                             "This is ${kotlin.math.abs(pct)}% ${if (up) "higher" else "lower"} than last time",
@@ -158,6 +195,7 @@ fun EditScreen(vm: AppViewModel, nav: NavHostController) {
                 )
             }
 
+            SectionHeader("Basics", color = Neon.Cyan)
             OutlinedTextField(item.title, { v -> set { copy(title = v) } }, label = { Text("What is it?") },
                 placeholder = { Text("e.g. Car insurance, Passport, DEWA bill") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Dropdown("Type", item.category, Category.entries, { "${it.emoji} ${it.label}" }, { c ->
@@ -167,12 +205,14 @@ fun EditScreen(vm: AppViewModel, nav: NavHostController) {
                 Dropdown("Date means", item.kind, DateKind.entries, { it.label }, { k -> set { copy(kind = k) } }, Modifier.weight(1f))
                 DateField("Date", item.dueDate, { v -> set { copy(dueDate = v) } }, Modifier.weight(1f))
             }
+            SectionHeader("Money", color = Neon.Violet)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(amountText, { amountText = it.filter { ch -> ch.isDigit() || ch == '.' || ch == ',' } }, label = { Text("Amount") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true, modifier = Modifier.weight(1f))
                 Dropdown("Currency", item.currency, currencies, { it }, { c -> set { copy(currency = c) } }, Modifier.width(120.dp))
             }
             Dropdown("Repeats", item.recurrence, Recurrence.entries, { it.label }, { r -> set { copy(recurrence = r) } }, Modifier.fillMaxWidth())
+            SectionHeader("Details", color = Neon.Blue)
             OutlinedTextField(item.provider ?: "", { v -> set { copy(provider = opt(v)) } }, label = { Text("Who is it with?") },
                 placeholder = { Text("Provider, bank, insurer, landlord…") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             OutlinedTextField(item.referenceNumber ?: "", { v -> set { copy(referenceNumber = opt(v)) } }, label = { Text("Reference / policy / account no.") },
@@ -199,12 +239,13 @@ fun EditScreen(vm: AppViewModel, nav: NavHostController) {
                     }
                 }
             }
-            Button(
-                onClick = {
+            GradientButton(
+                if (item.id == 0L) "Add to my LifeDesk" else "Save changes",
+                {
                     vm.saveDraft(item.copy(amount = amountText.replace(",", "").toDoubleOrNull())) { id -> nav.navigate("item/$id") { popUpTo("home") } }
                 },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-            ) { Text(if (item.id == 0L) "Add to my LifeDesk" else "Save changes") }
+                Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
             Spacer(Modifier.height(24.dp))
         }
     }
@@ -225,7 +266,7 @@ private fun FoundSection(
 ) {
     var showAllFields by remember { mutableStateOf(false) }
     if (parsed.schedule.size >= 2) {
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+        GlassCard(Modifier.fillMaxWidth(), glow = Neon.Green, padding = 0.dp) {
             Column(Modifier.padding(14.dp)) {
                 Text("📅 Payment schedule found: ${parsed.schedule.size} payments", fontWeight = FontWeight.Bold)
                 parsed.schedule.forEachIndexed { i, (date, amount) ->
@@ -241,7 +282,7 @@ private fun FoundSection(
         }
     }
     if (parsed.allDates.size > 1 || parsed.allAmounts.size > 1 || parsed.fields.isNotEmpty()) {
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+        GlassCard(Modifier.fillMaxWidth(), glow = Neon.Violet, padding = 0.dp) {
             Column(Modifier.padding(14.dp).animateContentSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("🔎 Everything we found", fontWeight = FontWeight.Bold)
                 if (parsed.allDates.isNotEmpty()) {

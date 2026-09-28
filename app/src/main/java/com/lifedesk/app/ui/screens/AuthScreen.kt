@@ -97,7 +97,10 @@ fun AuthScreen(vm: AppViewModel, onDone: () -> Unit, skipLabel: String? = null) 
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Spacer(Modifier.height(12.dp))
-        Text("🗂️", style = MaterialTheme.typography.displaySmall)
+        com.lifedesk.app.ui.components.RingGauge(0.78f, size = 72.dp, stroke = 5.dp) {
+            Icon(Icons.Outlined.Lock, null, tint = com.lifedesk.app.ui.theme.Neon.Cyan)
+        }
+        Text("SECURE ACCOUNT", style = MaterialTheme.typography.labelSmall, color = com.lifedesk.app.ui.theme.Neon.Cyan)
         AnimatedContent(createMode, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "title") { create ->
             Column {
                 Text(if (create) "Create your LifeDesk account" else "Welcome back", style = MaterialTheme.typography.headlineMedium)
@@ -169,12 +172,11 @@ fun AuthScreen(vm: AppViewModel, onDone: () -> Unit, skipLabel: String? = null) 
             Text("Password strength: $label", color = color, style = MaterialTheme.typography.bodySmall)
         }
 
-        Button(
-            onClick = { if (createMode) vm.signUp(name, email, password) {} else vm.signIn(email, password) {} },
-            enabled = canSubmit, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp),
-        ) {
-            if (busy) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp) else Text(if (createMode) "Create account" else "Sign in")
-        }
+        com.lifedesk.app.ui.components.GradientButton(
+            if (busy) "Please wait…" else if (createMode) "Create account" else "Sign in",
+            { if (createMode) vm.signUp(name, email, password) {} else vm.signIn(email, password) {} },
+            Modifier.fillMaxWidth(), enabled = canSubmit,
+        )
         if (!createMode) {
             TextButton(onClick = { forgotOpen = true }, modifier = Modifier.align(Alignment.End)) { Text("Forgot password?") }
         } else {

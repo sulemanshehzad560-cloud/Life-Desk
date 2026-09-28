@@ -30,6 +30,16 @@ UAE-first defaults (AED, day-first dates, UAE providers & documents); other GCC 
 
 Open the file on your Android phone (Android 8.0+) and allow "Install unknown apps" when asked.
 
+## New in 3.0 — full redesign
+
+A dark "command center" interface, redesigned end to end:
+- **Neon glass design system** — frosted-glass cards with gradient edges, glowing status dots, monospace figures, animated deep-space background with a tech grid.
+- **Home:** animated *Life Score* ring, terminal-style quick-add command bar (type or speak), stat pills, a **14-day timeline** strip, swipeable item cards with **countdown rings**, insight cards, gradient cash-flow chart, vault and asset carousels.
+- **Item detail:** gradient hero with a large countdown gauge, key-facts tiles, action pills, renewal checklist with progress, **price-history sparkline**, full-screen document viewer.
+- **Money radar:** 12-month **donut** by category, tappable month bars with per-category breakdown, subscription "freshness" meters.
+- **Scan:** animated **viewfinder** with a moving scan line, source tiles (gallery / PDF / email / manual), animated processing ring, AI-confidence gauge on the review screen.
+- **Control panel settings**, animated **onboarding pager**, floating glass navigation bar with a raised scan button, neon launcher icon and widget.
+
 ## New in 2.0
 
 | | |

@@ -52,11 +52,28 @@ jobs:
           name: LifeDesk-release-apk
           path: app/build/outputs/apk/release/*.apk
 
+      - name: Prepare release files (tags only)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          mkdir -p dist
+          # Stable name so https://github.com/<owner>/<repo>/releases/latest/download/LifeDesk.apk always works.
+          cp app/build/outputs/apk/debug/app-debug.apk dist/LifeDesk.apk
+          if ls app/build/outputs/apk/release/*.apk >/dev/null 2>&1; then
+            cp app/build/outputs/apk/release/*.apk dist/LifeDesk-signed.apk
+          fi
+
       - name: Publish GitHub release (tags only)
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            app/build/outputs/apk/debug/*.apk
-            app/build/outputs/apk/release/*.apk
-          fail_on_unmatched_files: false
+          name: LifeDesk ${{ github.ref_name }}
+          files: dist/*.apk
+          body: |
+            **LifeDesk** — everything in your life that has a date, payment or deadline.
+
+            ### Install on Android
+            1. Download **LifeDesk.apk** below on your phone.
+            2. Open it. If asked, allow your browser/file manager to "Install unknown apps".
+            3. Tap **Install**, open LifeDesk, and try **Explore with sample data** or scan your first document.
+
+            Requires Android 8.0 or newer. All data stays on your phone.

@@ -24,6 +24,12 @@ bills, subscriptions, IDs, insurance, warranties, renewals, appointments and fin
 
 UAE-first defaults (AED, day-first dates, UAE providers & documents); other GCC currencies, USD, EUR, GBP, INR and PKR are supported.
 
+## Download
+
+**[⬇️ Download LifeDesk.apk (latest)](https://github.com/sulemanshehzad560-cloud/Life-Desk/releases/latest/download/LifeDesk.apk)** · [All releases](https://github.com/sulemanshehzad560-cloud/Life-Desk/releases)
+
+Open the file on your Android phone (Android 8.0+) and allow "Install unknown apps" when asked.
+
 ## Getting the APK
 
 ### Option A — GitHub Actions (no Android Studio needed)
@@ -31,7 +37,7 @@ Every push runs **Build APK** (`.github/workflows/build-apk.yml`): unit tests + 
 Open the run in the **Actions** tab → download the **LifeDesk-debug-apk** artifact → unzip → install `app-debug.apk`
 on your phone (allow “Install unknown apps” for your browser/file manager).
 
-Push a tag like `v1.0.0` to also attach the APK to a GitHub Release.
+Push a tag like `v1.0.1` to publish a new GitHub Release; the download link above always points to the newest one.
 
 ### Option B — build locally
 Requirements: JDK 17+, Android SDK (Android Studio Ladybug or newer).

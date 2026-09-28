@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
         if (itemId > 0) vm.openItem(itemId)
         if (intent.action == Intent.ACTION_SEND && intent.type?.startsWith("image/") == true) {
             val uri: Uri? = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
-            else @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_STREAM)
+            else @Suppress("DEPRECATION") intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
             uri?.let { vm.importSharedImage(it) }
         }
     }

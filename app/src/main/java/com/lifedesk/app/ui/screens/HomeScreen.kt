@@ -28,6 +28,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,7 +48,10 @@ import com.lifedesk.app.domain.relativeDays
 import com.lifedesk.app.domain.urgency
 import com.lifedesk.app.ui.AppViewModel
 import com.lifedesk.app.ui.components.Dot
+import com.lifedesk.app.ui.components.BarChart
 import com.lifedesk.app.ui.components.ItemRow
+import com.lifedesk.app.ui.components.SwipeItemRow
+import com.lifedesk.app.domain.forecast
 import com.lifedesk.app.ui.components.SectionTitle
 import com.lifedesk.app.ui.goTab
 import com.lifedesk.app.ui.theme.SavingsGreen
@@ -84,6 +90,8 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
+        item { QuickAddBar(vm) }
+
         if (items.isEmpty()) {
             item { EmptyHome(onScan = { nav.goTab("scan") }, onSample = vm::loadSampleData) }
             return@LazyColumn
@@ -101,11 +109,16 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
         val soon = o.attention - now.toSet()
         if (now.isNotEmpty()) {
             item { SectionTitle("🔴 Needs attention now") }
-            items(now, key = { "now-${it.id}" }) { ItemRow(it, today, onClick = { nav.navigate("item/${it.id}") }) }
+            items(now, key = { "now-${it.id}" }) {
+                SwipeItemRow(it, today, onClick = { nav.navigate("item/${it.id}") }, onComplete = { vm.complete(it) }, onSnooze = { vm.snooze(it, 3) })
+            }
+            item { Text("Tip: swipe right when done, left to snooze", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
         if (soon.isNotEmpty()) {
             item { SectionTitle("🟠 Coming up") }
-            items(soon.take(6), key = { "soon-${it.id}" }) { ItemRow(it, today, onClick = { nav.navigate("item/${it.id}") }) }
+            items(soon.take(6), key = { "soon-${it.id}" }) {
+                SwipeItemRow(it, today, onClick = { nav.navigate("item/${it.id}") }, onComplete = { vm.complete(it) }, onSnooze = { vm.snooze(it, 3) })
+            }
             if (soon.size > 6) item {
                 TextButton(onClick = { nav.navigate("items?status=UPCOMING") }) { Text("See all ${soon.size} upcoming") }
             }
@@ -150,6 +163,20 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
                         MoneyLine("Potential savings", money(o.potentialSavings, cur))
                     }
                 }
+            }
+        }
+
+        item {
+            val f = remember(items) { forecast(items, today, 6) }
+            SectionTitle("📊 Next 6 months")
+            InsightCard(onClick = { nav.goTab("subscriptions") }) {
+                Text("${money(f.sumOf { it.total }, cur)} due over the next 6 months", style = MaterialTheme.typography.titleMedium)
+                Spacer(Modifier.height(10.dp))
+                BarChart(
+                    values = f.map { it.total },
+                    labels = f.map { it.month.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH) },
+                    modifier = Modifier.fillMaxWidth().height(140.dp),
+                )
             }
         }
 
@@ -235,4 +262,44 @@ private fun EmptyHome(onScan: () -> Unit, onSample: () -> Unit) {
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = onSample, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Explore with sample data") }
     }
+}
+
+
+/** One line to add anything: "DEWA bill 450 dirhams due next Friday". Type or speak. */
+@Composable
+private fun QuickAddBar(vm: AppViewModel) {
+    var text by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val voice = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        val spoken = result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+        if (!spoken.isNullOrBlank()) { vm.quickAdd(spoken); text = "" }
+    }
+    androidx.compose.material3.OutlinedTextField(
+        value = text,
+        onValueChange = { text = it },
+        placeholder = { Text("Quick add… “Gym 250 monthly on the 1st”") },
+        singleLine = true,
+        shape = RoundedCornerShape(28.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { if (vm.quickAdd(text)) text = "" }),
+        trailingIcon = {
+            if (text.isBlank()) {
+                IconButton(onClick = {
+                    val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                        .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                        .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Say what to remember, e.g. “car insurance 2,850 dirhams due 10 October”")
+                    runCatching { voice.launch(intent) }.onFailure {
+                        android.widget.Toast.makeText(context, "Voice input isn't available on this phone", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }) { Icon(androidx.compose.material.icons.Icons.Outlined.Mic, "Speak") }
+            } else {
+                IconButton(onClick = { if (vm.quickAdd(text)) text = "" }) {
+                    Icon(androidx.compose.material.icons.Icons.AutoMirrored.Outlined.Send, "Add")
+                }
+            }
+        },
+    )
 }

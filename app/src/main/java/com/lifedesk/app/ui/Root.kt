@@ -29,7 +29,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.lifedesk.app.ui.screens.AuthScreen
 import com.lifedesk.app.ui.screens.EditScreen
+import com.lifedesk.app.ui.screens.LockScreen
 import com.lifedesk.app.ui.screens.HomeScreen
 import com.lifedesk.app.ui.screens.ItemDetailScreen
 import com.lifedesk.app.ui.screens.ItemsScreen
@@ -44,7 +46,7 @@ private val tabs = listOf(
     Tab("home", "Home", Icons.Outlined.Home),
     Tab("items", "Everything", Icons.Outlined.FolderOpen),
     Tab("scan", "Scan", Icons.Filled.CameraAlt),
-    Tab("subscriptions", "Subs", Icons.Outlined.Subscriptions),
+    Tab("subscriptions", "Money", Icons.Outlined.Subscriptions),
     Tab("settings", "Settings", Icons.Outlined.Settings),
 )
 
@@ -100,7 +102,17 @@ fun LifeDeskRoot(vm: AppViewModel) {
             modifier = Modifier.padding(padding),
         ) {
             composable("welcome") {
-                WelcomeScreen(vm) { nav.navigate("home") { popUpTo("welcome") { inclusive = true } } }
+                WelcomeScreen(vm) {
+                    // With accounts available, offer sign-up right after onboarding (skippable).
+                    val next = if (vm.accountsAvailable && vm.account.value == null) "auth?first=true" else "home"
+                    nav.navigate(next) { popUpTo("welcome") { inclusive = true } }
+                }
+            }
+            composable("auth?first={first}", arguments = listOf(navArgument("first") { type = NavType.BoolType; defaultValue = false })) { entry ->
+                val first = entry.arguments?.getBoolean("first") ?: false
+                AuthScreen(vm, onDone = {
+                    if (first) nav.navigate("home") { popUpTo(0) { inclusive = true } } else nav.popBackStack()
+                }, skipLabel = if (first) "Continue without an account" else null)
             }
             composable("home") { HomeScreen(vm, nav) }
             composable(
@@ -123,9 +135,12 @@ fun LifeDeskRoot(vm: AppViewModel) {
                 ItemDetailScreen(vm, nav, entry.arguments?.getLong("id") ?: 0L)
             }
             composable("subscriptions") { SubscriptionsScreen(vm, nav) }
-            composable("settings") { SettingsScreen(vm) }
+            composable("settings") { SettingsScreen(vm, nav) }
         }
     }
+
+    val locked by vm.locked.collectAsStateWithLifecycle()
+    if (locked) LockScreen(vm)
 
     (scan as? ScanState.Failed)?.let { failed ->
         AlertDialog(

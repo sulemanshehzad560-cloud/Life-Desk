@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -55,6 +56,44 @@ fun SubscriptionsScreen(vm: AppViewModel, nav: NavHostController) {
 
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
+            item {
+                val f = androidx.compose.runtime.remember(items) { com.lifedesk.app.domain.forecast(items, today, 12) }
+                var selected by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(0) }
+                Text("Your money, next 12 months", style = MaterialTheme.typography.headlineMedium)
+                Text("${money(f.sumOf { it.total }, cur)} in bills, renewals and subscriptions", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Card(Modifier.fillMaxWidth().padding(top = 12.dp), shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                    Column(Modifier.padding(16.dp)) {
+                        com.lifedesk.app.ui.components.BarChart(
+                            values = f.map { it.total },
+                            labels = f.map { it.month.month.getDisplayName(java.time.format.TextStyle.NARROW, java.util.Locale.ENGLISH) },
+                            highlight = selected,
+                            modifier = Modifier.fillMaxWidth().height(140.dp),
+                        )
+                        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 10.dp)) {
+                            items(f.size) { i ->
+                                androidx.compose.material3.FilterChip(
+                                    selected = selected == i, onClick = { selected = i },
+                                    label = { Text(f[i].month.month.getDisplayName(java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH) + " " + f[i].month.year % 100) },
+                                )
+                            }
+                        }
+                        val m = f.getOrNull(selected)
+                        if (m != null) {
+                            Text("${m.month.month.getDisplayName(java.time.format.TextStyle.FULL, java.util.Locale.ENGLISH)} ${m.month.year}: ${money(m.total, cur)}",
+                                style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp))
+                            m.byCategory.entries.sortedByDescending { it.value }.forEach { (c, v) ->
+                                Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                                    Text("${c.emoji} ${c.label}", Modifier.weight(1f))
+                                    Text(money(v, cur), fontWeight = FontWeight.Medium)
+                                }
+                            }
+                            if (m.byCategory.isEmpty()) Text("Nothing due this month 🎉", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(20.dp))
+            }
             item {
                 Text("Where is my money going?", style = MaterialTheme.typography.headlineMedium)
                 Card(Modifier.fillMaxWidth().padding(top = 12.dp), shape = RoundedCornerShape(20.dp),

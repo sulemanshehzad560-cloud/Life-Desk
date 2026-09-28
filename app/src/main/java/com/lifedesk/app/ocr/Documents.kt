@@ -32,6 +32,31 @@ object DocumentStore {
         out
     }
 
+    /**
+     * Renders the first [maxPages] pages of a PDF (e-invoices, statements, policies) to images inside the app,
+     * so they can be read by OCR and kept as the document photo. Returns the page images in order.
+     */
+    suspend fun pdfPages(context: Context, uri: Uri, maxPages: Int = 4): List<File> = withContext(Dispatchers.IO) {
+        val pfd = context.contentResolver.openFileDescriptor(uri, "r") ?: error("Could not open the PDF")
+        pfd.use { fd ->
+            android.graphics.pdf.PdfRenderer(fd).use { renderer ->
+                (0 until minOf(renderer.pageCount, maxPages)).map { i ->
+                    renderer.openPage(i).use { page ->
+                        // ~200 dpi for good OCR, capped to keep memory reasonable.
+                        val scale = minOf(200f / 72f, 2400f / maxOf(page.width, page.height))
+                        val bmp = Bitmap.createBitmap((page.width * scale).toInt(), (page.height * scale).toInt(), Bitmap.Config.ARGB_8888)
+                        bmp.eraseColor(android.graphics.Color.WHITE)
+                        page.render(bmp, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                        val out = newPhotoFile(context)
+                        out.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+                        bmp.recycle()
+                        out
+                    }
+                }
+            }
+        }
+    }
+
     /** Decodes a downscaled, correctly rotated bitmap for display. */
     fun loadBitmap(path: String, maxSize: Int = 1600): Bitmap? = runCatching {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }

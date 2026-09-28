@@ -51,7 +51,7 @@ fun LifeItem.headline(today: LocalDate): String {
     else "$title ${kind.verb} ${relativeDays(d)}."
 }
 
-enum class ActionType { COMPLETE, SNOOZE, CONTACT, COMPARE, REVIEW_SUBSCRIPTION, MARK_USED, PLAN_RENEWAL, WARRANTY_CLAIM, NEW_DOCUMENT }
+enum class ActionType { COMPLETE, SNOOZE, CONTACT, COMPARE, REVIEW_SUBSCRIPTION, MARK_USED, PLAN_RENEWAL, WARRANTY_CLAIM, NEW_DOCUMENT, ADD_TO_CALENDAR, SHARE }
 
 /** Label for the main "finish the job" button, tuned per category. */
 fun LifeItem.completeLabel(): String = when {
@@ -77,6 +77,8 @@ fun LifeItem.suggestedActions(): List<ActionType> {
     list += ActionType.SNOOZE
     list += ActionType.CONTACT
     list += ActionType.NEW_DOCUMENT
+    if (dueDate != null) list += ActionType.ADD_TO_CALENDAR
+    list += ActionType.SHARE
     return list
 }
 

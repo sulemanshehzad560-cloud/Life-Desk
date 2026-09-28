@@ -30,6 +30,46 @@ UAE-first defaults (AED, day-first dates, UAE providers & documents); other GCC 
 
 Open the file on your Android phone (Android 8.0+) and allow "Install unknown apps" when asked.
 
+## New in 2.0
+
+| | |
+|---|---|
+| 👤 **Accounts** | Create an account with any email (e.g. Gmail) or **Continue with Google**. Verification email on sign-up, **Forgot password** sends a reset link, sign out, delete account. |
+| ☁️ **Cloud backup** | Your reminder list is backed up privately to your account (automatically after changes and daily) and restored when you sign in on a new phone. Document photos stay on the phone. |
+| 🔎 **Extract everything** | Every date, amount and labelled field (policy no., plate, Ejari no., account…) is shown after a scan — tap any to use it. |
+| 📅 **Payment schedules** | Tenancy cheques, loan instalments, school terms: one tap creates a reminder per payment. |
+| 📄 **PDFs & emails** | Import PDFs (e-invoices, statements), or share an email/SMS from Gmail or WhatsApp → LifeDesk reads the text. |
+| 🎙️ **Quick add** | Type or speak “DEWA bill 450 dirhams due next Friday” — understood and saved in one step. |
+| 👉 **Swipe actions** | Swipe right = paid/renewed, left = snooze 3 days. |
+| 🔔 **Actionable notifications** | “Paid” / “Snooze 1 day” buttons right on the reminder. |
+| 📊 **12-month cash-flow** | Bar chart of what's due each month (recurring bills expanded), with a per-category breakdown. |
+| 🗓️ **Calendar & share** | Add any date to Google Calendar; share details with family via WhatsApp. |
+| 🔒 **App lock** | Fingerprint / face / phone PIN. |
+| 📱 **Home-screen widget** | The next three things that need attention. |
+
+## Turning on accounts (Firebase, free)
+
+Accounts, verification/reset emails and cloud backup use **Firebase Authentication + Firestore**. One-time setup:
+
+1. Go to <https://console.firebase.google.com> → **Add project** (Analytics not needed).
+2. **Build → Authentication → Get started** → enable **Email/Password** and **Google**.
+   *Templates* tab: optionally customise the verification and password-reset emails.
+3. **Build → Firestore Database → Create database** (production mode) → **Rules** tab → paste `firestore.rules` from this repo → Publish.
+4. **Project settings → Your apps → Add app → Android**, package name `com.lifedesk.app`, and add this **SHA-1**
+   (from the committed build key `app/lifedesk-debug.keystore`):
+   `A7:8E:DF:07:7F:84:F1:0F:C5:03:B4:F7:B8:F4:DB:4C:6A:53:86:6C`
+5. From the downloaded `google-services.json` copy these into **GitHub → Settings → Secrets and variables → Actions → New repository secret**:
+   - `FIREBASE_API_KEY` = `client[0].api_key[0].current_key`
+   - `FIREBASE_APP_ID` = `client[0].client_info.mobilesdk_app_id`
+   - `FIREBASE_PROJECT_ID` = `project_info.project_id`
+   - `GOOGLE_WEB_CLIENT_ID` = the `client_id` in `oauth_client` with `"client_type": 3` (Web client)
+6. Push any commit (or re-run the workflow). The new APK will show **Sign in / Create account**.
+
+Without these secrets everything else works; the account screen explains accounts aren't enabled.
+
+> Note: builds are now signed with a fixed key, so updates install over each other. If you installed a 1.x APK,
+> uninstall it once (use *Settings → Back up to a file* first to keep your data).
+
 ## Getting the APK
 
 ### Option A — GitHub Actions (no Android Studio needed)

@@ -20,6 +20,12 @@ data class ParsedDocument(
     val phone: String? = null,
     val email: String? = null,
     val allDates: List<LocalDate> = emptyList(),
+    /** Every money amount found, largest first. */
+    val allAmounts: List<Pair<Double, String>> = emptyList(),
+    /** Every "Label: value" pair found (policy no., plate, account, etc.). */
+    val fields: List<Pair<String, String>> = emptyList(),
+    /** Dated instalments (e.g. tenancy cheques, loan instalments, school fee terms), in date order. */
+    val schedule: List<Pair<LocalDate, Double>> = emptyList(),
     /** 0..1 — how many of the key fields (type, date, amount/provider) were found. */
     val confidence: Double = 0.0,
 )
@@ -178,6 +184,9 @@ object DocumentParser {
             phone = phone,
             email = email,
             allDates = dated.map { it.date }.distinct().sorted(),
+            allAmounts = allAmounts(lines, defaultCurrency),
+            fields = labeledFields(lines),
+            schedule = paymentSchedule(lines),
             confidence = score,
         )
     }
@@ -427,5 +436,63 @@ object DocumentParser {
         return referenceRegex.findAll(text)
             .map { it.groupValues[2].trimEnd('-', '/', '.') }
             .firstOrNull { ref -> ref.any(Char::isDigit) && ref.length >= 5 && datesInLine(ref).isEmpty() }
+    }
+
+    // ---------- extract everything ----------
+
+    private fun stripDates(line: String): String =
+        listOf(isoDate, dayMonthName, monthNameDay, numericDate).fold(line) { acc, re -> re.replace(acc, " ") }
+
+    fun allAmounts(lines: List<String>, defaultCurrency: String = "AED"): List<Pair<Double, String>> {
+        val out = mutableListOf<Pair<Double, String>>()
+        lines.forEach { line ->
+            curBefore.findAll(line).forEach { m ->
+                m.groupValues[2].replace(",", "").toDoubleOrNull()?.takeIf { it > 0 }?.let { out += it to normaliseCurrency(m.groupValues[1], defaultCurrency) }
+            }
+            curAfter.findAll(line).forEach { m ->
+                m.groupValues[1].replace(",", "").toDoubleOrNull()?.takeIf { it > 0 }?.let { out += it to normaliseCurrency(m.groupValues[2], defaultCurrency) }
+            }
+        }
+        return out.distinctBy { it.first }.sortedByDescending { it.first }.take(10)
+    }
+
+    private val colonField = Regex("^([\\p{L}][\\p{L} .#/&()'\\-]{1,40}?)\\s*[:：]\\s*(\\S.{0,70})$")
+    private val columnField = Regex("^([\\p{L}][\\p{L} .#/&()'\\-]{2,35}?)\\s{2,}(\\S.{0,70})$")
+    private val boringLabels = Regex("(?i)^(page|tel|fax|www|http|https|note|notes)$")
+
+    /** "Policy No: MTR-2025-884211", "Plate   Dubai K 12345" → label/value pairs, in document order. */
+    fun labeledFields(lines: List<String>): List<Pair<String, String>> {
+        val out = linkedMapOf<String, String>()
+        for (line in lines) {
+            val m = colonField.find(line.trim()) ?: columnField.find(line.trim()) ?: continue
+            val label = m.groupValues[1].trim().trimEnd('.', '#', '-').replace(Regex("\\s+"), " ")
+            val value = m.groupValues[2].trim()
+            if (label.length < 2 || boringLabels.matches(label) || value.isBlank()) continue
+            if (label.count { it.isLetter() } < 2) continue
+            val key = label.replaceFirstChar(Char::uppercase)
+            if (key !in out) out[key] = value
+            if (out.size >= 30) break
+        }
+        return out.toList()
+    }
+
+    /**
+     * Rows that each carry one date and one amount, e.g. a tenancy contract's cheque list:
+     * "Cheque 1   01/10/2026   AED 21,250.00". Two or more such rows make a schedule.
+     */
+    fun paymentSchedule(lines: List<String>): List<Pair<LocalDate, Double>> {
+        val rows = mutableListOf<Pair<LocalDate, Double>>()
+        for (line in lines) {
+            val dates = datesInLine(line)
+            if (dates.size != 1) continue
+            val rest = stripDates(line)
+            val amount = (curBefore.find(rest)?.groupValues?.get(2) ?: curAfter.find(rest)?.groupValues?.get(1)
+                ?: Regex("(?<![\\d.])(\\d{1,3}(?:,\\d{3})+(?:\\.\\d{1,2})?|\\d{3,}\\.\\d{2})(?![\\d])").find(rest)?.groupValues?.get(1))
+                ?.replace(",", "")?.toDoubleOrNull() ?: continue
+            if (amount <= 0) continue
+            rows += dates.first() to amount
+        }
+        val distinct = rows.distinctBy { it.first }.sortedBy { it.first }
+        return if (distinct.size >= 2) distinct else emptyList()
     }
 }

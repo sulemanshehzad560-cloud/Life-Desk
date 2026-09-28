@@ -3,6 +3,8 @@ package com.lifedesk.app.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -140,6 +142,22 @@ fun EditScreen(vm: AppViewModel, nav: NavHostController) {
                 }
             }
 
+            d.parsed?.let { parsed ->
+                FoundSection(
+                    parsed = parsed,
+                    currentDate = item.dueDate,
+                    currentAmount = amountText.replace(",", "").toDoubleOrNull(),
+                    onDate = { v -> set { copy(dueDate = v) } },
+                    onAmount = { v, c -> amountText = if (v % 1.0 == 0.0) v.toLong().toString() else v.toString(); set { copy(currency = c) } },
+                    onField = { label, value -> set { copy(notes = listOfNotNull(notes, "$label: $value").joinToString("\n")) } },
+                    onSchedule = {
+                        vm.saveSchedule(item.copy(amount = amountText.replace(",", "").toDoubleOrNull()), parsed.schedule) {
+                            nav.navigate("home") { popUpTo("home") { inclusive = true } }
+                        }
+                    },
+                )
+            }
+
             OutlinedTextField(item.title, { v -> set { copy(title = v) } }, label = { Text("What is it?") },
                 placeholder = { Text("e.g. Car insurance, Passport, DEWA bill") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
             Dropdown("Type", item.category, Category.entries, { "${it.emoji} ${it.label}" }, { c ->
@@ -188,6 +206,74 @@ fun EditScreen(vm: AppViewModel, nav: NavHostController) {
                 modifier = Modifier.fillMaxWidth().height(52.dp),
             ) { Text(if (item.id == 0L) "Add to my LifeDesk" else "Save changes") }
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+
+/** "Everything we found": every date, amount, labelled field and any payment schedule in the document. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun FoundSection(
+    parsed: com.lifedesk.app.domain.ParsedDocument,
+    currentDate: java.time.LocalDate?,
+    currentAmount: Double?,
+    onDate: (java.time.LocalDate) -> Unit,
+    onAmount: (Double, String) -> Unit,
+    onField: (String, String) -> Unit,
+    onSchedule: () -> Unit,
+) {
+    var showAllFields by remember { mutableStateOf(false) }
+    if (parsed.schedule.size >= 2) {
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+            Column(Modifier.padding(14.dp)) {
+                Text("📅 Payment schedule found: ${parsed.schedule.size} payments", fontWeight = FontWeight.Bold)
+                parsed.schedule.forEachIndexed { i, (date, amount) ->
+                    Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                        Text("${i + 1}. ${date.pretty()}", Modifier.weight(1f))
+                        Text(money(amount, parsed.currency ?: "AED"), fontWeight = FontWeight.Medium)
+                    }
+                }
+                Button(onClick = onSchedule, modifier = Modifier.fillMaxWidth().padding(top = 10.dp)) {
+                    Text("Create ${parsed.schedule.size} payment reminders")
+                }
+            }
+        }
+    }
+    if (parsed.allDates.size > 1 || parsed.allAmounts.size > 1 || parsed.fields.isNotEmpty()) {
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+            Column(Modifier.padding(14.dp).animateContentSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("🔎 Everything we found", fontWeight = FontWeight.Bold)
+                if (parsed.allDates.isNotEmpty()) {
+                    Text("Dates — tap to use", style = MaterialTheme.typography.labelMedium)
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        parsed.allDates.forEach { d ->
+                            androidx.compose.material3.FilterChip(selected = d == currentDate, onClick = { onDate(d) }, label = { Text(d.pretty()) })
+                        }
+                    }
+                }
+                if (parsed.allAmounts.isNotEmpty()) {
+                    Text("Amounts — tap to use", style = MaterialTheme.typography.labelMedium)
+                    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        parsed.allAmounts.forEach { (v, c) ->
+                            androidx.compose.material3.FilterChip(selected = v == currentAmount, onClick = { onAmount(v, c) }, label = { Text(money(v, c)) })
+                        }
+                    }
+                }
+                if (parsed.fields.isNotEmpty()) {
+                    Text("Details — tap to add to notes", style = MaterialTheme.typography.labelMedium)
+                    val shown = if (showAllFields) parsed.fields else parsed.fields.take(6)
+                    shown.forEach { (label, value) ->
+                        Row(Modifier.fillMaxWidth().clickable { onField(label, value) }.padding(vertical = 3.dp)) {
+                            Text(label, Modifier.weight(0.45f), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                            Text(value, Modifier.weight(0.55f), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                        }
+                    }
+                    if (parsed.fields.size > 6) TextButton(onClick = { showAllFields = !showAllFields }) {
+                        Text(if (showAllFields) "Show less" else "Show all ${parsed.fields.size}")
+                    }
+                }
+            }
         }
     }
 }

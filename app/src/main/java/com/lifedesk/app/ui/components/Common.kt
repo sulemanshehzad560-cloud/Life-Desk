@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -138,5 +139,59 @@ fun DateField(label: String, date: LocalDate?, onChange: (LocalDate?) -> Unit, m
             modifier = Modifier.fillMaxWidth(),
         )
         Box(Modifier.matchParentSize().padding(top = 8.dp, end = 56.dp).clickable { open() })
+    }
+}
+
+/**
+ * Swipe right → complete (paid / renewed), swipe left → snooze 3 days. The row springs back; the list updates itself.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeItemRow(item: LifeItem, today: LocalDate, onClick: () -> Unit, onComplete: () -> Unit, onSnooze: () -> Unit) {
+    val state = androidx.compose.material3.rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            when (value) {
+                androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd -> onComplete()
+                androidx.compose.material3.SwipeToDismissBoxValue.EndToStart -> onSnooze()
+                else -> Unit
+            }
+            false
+        },
+        positionalThreshold = { it * 0.35f },
+    )
+    androidx.compose.material3.SwipeToDismissBox(
+        state = state,
+        backgroundContent = {
+            val toEnd = state.dismissDirection == androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd
+            val color = if (toEnd) Color(0xFF2E7D32) else Color(0xFFE08600)
+            Box(
+                Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(16.dp)).background(color).padding(horizontal = 20.dp),
+                contentAlignment = if (toEnd) Alignment.CenterStart else Alignment.CenterEnd,
+            ) {
+                Text(if (toEnd) "✓ Done" else "⏰ Snooze 3 days", color = Color.White, fontWeight = FontWeight.Bold)
+            }
+        },
+    ) {
+        ItemRow(item, today, onClick)
+    }
+}
+
+/** Minimal bar chart (no chart library): one bar per value, labels underneath, highlighted index optional. */
+@Composable
+fun BarChart(values: List<Double>, labels: List<String>, modifier: Modifier = Modifier, highlight: Int = 0, barColor: Color = MaterialTheme.colorScheme.primary) {
+    val max = (values.maxOrNull() ?: 0.0).coerceAtLeast(1.0)
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
+        values.forEachIndexed { i, v ->
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                val fraction = (v / max).toFloat().coerceIn(0.02f, 1f)
+                val animated by androidx.compose.animation.core.animateFloatAsState(fraction, label = "bar")
+                Box(
+                    Modifier.fillMaxWidth().height((110 * animated).dp)
+                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                        .background(if (i == highlight) barColor else barColor.copy(alpha = 0.45f)),
+                )
+                Text(labels.getOrElse(i) { "" }, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+            }
+        }
     }
 }

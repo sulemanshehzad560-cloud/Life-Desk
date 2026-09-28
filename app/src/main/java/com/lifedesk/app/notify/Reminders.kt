@@ -22,6 +22,7 @@ import com.lifedesk.app.LifeDeskApp
 import com.lifedesk.app.MainActivity
 import com.lifedesk.app.R
 import com.lifedesk.app.data.LifeItem
+import com.lifedesk.app.domain.completeLabel
 import com.lifedesk.app.domain.countdown
 import com.lifedesk.app.domain.daysLeft
 import com.lifedesk.app.domain.headline
@@ -69,7 +70,7 @@ object Reminders {
         (Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) &&
             NotificationManagerCompat.from(context).areNotificationsEnabled()
 
-    fun notify(context: Context, id: Int, title: String, body: String, itemId: Long?) {
+    fun notify(context: Context, id: Int, title: String, body: String, itemId: Long?, doneLabel: String = "Done") {
         if (!canNotify(context)) return
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
@@ -83,6 +84,17 @@ object Reminders {
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setContentIntent(pending)
             .setAutoCancel(true)
+            .apply {
+                if (itemId != null) {
+                    fun action(action: String, code: Int) = PendingIntent.getBroadcast(
+                        context, id * 10 + code,
+                        Intent(context, NotificationActionReceiver::class.java).setAction(action).putExtra(EXTRA_ITEM_ID, itemId),
+                        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                    )
+                    addAction(0, doneLabel, action(NotificationActionReceiver.ACTION_DONE, 1))
+                    addAction(0, "Snooze 1 day", action(NotificationActionReceiver.ACTION_SNOOZE, 2))
+                }
+            }
             .build()
         try {
             NotificationManagerCompat.from(context).notify(id, notification)
@@ -108,9 +120,13 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
         } else {
             items.filter { it.reminderDueToday(today) }.sortedBy { it.daysLeft(today) }
         }
-        due.take(6).forEach { item -> Reminders.notify(applicationContext, item.id.toInt(), title(item, today), body(item, today, currency), item.id) }
+        due.take(6).forEach { item -> Reminders.notify(applicationContext, item.id.toInt(), title(item, today), body(item, today, currency), item.id, item.completeLabel().removePrefix("Mark as ").replaceFirstChar { it.uppercase() }) }
         if (due.size > 6) {
             Reminders.notify(applicationContext, Int.MAX_VALUE, "${due.size - 6} more items need attention", "Open LifeDesk to see everything that's coming up.", null)
+        }
+        com.lifedesk.app.widget.DueWidget.refresh(applicationContext)
+        if (app.prefs.settings.value.autoBackup && app.accounts.account.value != null) {
+            runCatching { app.cloud.backup() }.onSuccess { app.prefs.update { s -> s.copy(lastBackupAt = System.currentTimeMillis()) } }
         }
         return Result.success()
     }

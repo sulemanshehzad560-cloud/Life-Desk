@@ -21,6 +21,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.MarkEmailRead
+import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -64,6 +66,11 @@ fun ScanScreen(vm: AppViewModel, nav: NavHostController, replaceItemId: Long?) {
         uri?.let { vm.processPickedImage(it, replaceItemId, goToReview) }
     }
 
+    val pickPdf = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+        uri?.let { vm.processPdf(it, replaceItemId, goToReview) }
+    }
+    var pasteOpen by rememberSaveable { mutableStateOf(false) }
+
     fun launchCamera() {
         val file = vm.newPhotoFile()
         pendingPhoto = file.path
@@ -81,7 +88,13 @@ fun ScanScreen(vm: AppViewModel, nav: NavHostController, replaceItemId: Long?) {
             BigAction(Icons.Outlined.PhotoLibrary, "Choose from gallery", "Screenshots of emails, e-invoices, WhatsApp images") {
                 pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
             }
+            BigAction(Icons.Outlined.PictureAsPdf, "Import a PDF", "E-invoices, bank statements, policies, contracts") {
+                pickPdf.launch(arrayOf("application/pdf"))
+            }
             if (replaceItemId == null) {
+                BigAction(Icons.Outlined.MarkEmailRead, "Paste an email or SMS", "Copy the text of a bill or booking email and paste it") {
+                    pasteOpen = true
+                }
                 BigAction(Icons.Outlined.EditNote, "Enter manually", "Add a reminder without a document") {
                     vm.startManual(); goToReview()
                 }
@@ -91,7 +104,7 @@ fun ScanScreen(vm: AppViewModel, nav: NavHostController, replaceItemId: Long?) {
             listOf(
                 "Lay the document flat in good light and fill the frame.",
                 "The page with the expiry/due date and amount matters most.",
-                "You can also share an image to LifeDesk from WhatsApp, Gmail or Photos.",
+                "In Gmail, WhatsApp or Files: tap Share → LifeDesk on any email, PDF or photo.",
             ).forEach { Text("•  $it", color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 4.dp)) }
         }
 
@@ -107,6 +120,30 @@ fun ScanScreen(vm: AppViewModel, nav: NavHostController, replaceItemId: Long?) {
             }
         }
     }
+    if (pasteOpen) PasteDialog(onDismiss = { pasteOpen = false }) { t -> pasteOpen = false; vm.processText(t, goToReview) }
+}
+
+@Composable
+private fun PasteDialog(onDismiss: () -> Unit, onRead: (String) -> Unit) {
+    var text by rememberSaveable { mutableStateOf("") }
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Paste an email or message") },
+        text = {
+            Column {
+                Text("LifeDesk will pull out the dates, amounts and references.", style = MaterialTheme.typography.bodySmall)
+                androidx.compose.material3.OutlinedTextField(
+                    text, { text = it }, minLines = 5, maxLines = 10,
+                    placeholder = { Text("e.g. “Your DEWA bill of AED 812.40 is due on 25/10/2026…”") },
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+                androidx.compose.material3.TextButton(onClick = { clipboard.getText()?.text?.let { text = it } }) { Text("Paste from clipboard") }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { onRead(text) }, enabled = text.isNotBlank()) { Text("Read it") } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
 }
 
 @Composable

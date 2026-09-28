@@ -40,7 +40,7 @@ import com.lifedesk.app.domain.Urgency
 import com.lifedesk.app.domain.isSnoozed
 import com.lifedesk.app.domain.urgency
 import com.lifedesk.app.ui.AppViewModel
-import com.lifedesk.app.ui.components.ItemRow
+import com.lifedesk.app.ui.components.SwipeItemRow
 import java.time.LocalDate
 
 private enum class StatusFilter(val label: String) { ALL("All"), URGENT("🔴 Urgent"), UPCOMING("🟠 Upcoming"), MONITORED("🟢 Monitored") }
@@ -118,6 +118,8 @@ fun ItemsScreen(vm: AppViewModel, nav: NavHostController, initialStatus: String,
                 )
             }
         }
-        items(result.items, key = { it.id }) { ItemRow(it, today, onClick = { nav.navigate("item/${it.id}") }) }
+        items(result.items, key = { it.id }) {
+            SwipeItemRow(it, today, onClick = { nav.navigate("item/${it.id}") }, onComplete = { vm.complete(it) }, onSnooze = { vm.snooze(it, 3) })
+        }
     }
 }

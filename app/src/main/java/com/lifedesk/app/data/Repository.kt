@@ -66,7 +66,7 @@ class LifeRepository(private val dao: LifeDao) {
 
     // ---------- backup ----------
 
-    suspend fun exportJson(): String {
+    suspend fun exportJson(includeRawText: Boolean = true): String {
         val items = JSONArray()
         dao.allItems().forEach { i ->
             items.put(JSONObject().apply {
@@ -74,7 +74,7 @@ class LifeRepository(private val dao: LifeDao) {
                 put("provider", i.provider); put("amount", i.amount); put("currency", i.currency)
                 put("dueDate", i.dueDate?.toString()); put("recurrence", i.recurrence.name)
                 put("referenceNumber", i.referenceNumber); put("asset", i.asset); put("notes", i.notes)
-                put("contactPhone", i.contactPhone); put("contactEmail", i.contactEmail); put("rawText", i.rawText)
+                put("contactPhone", i.contactPhone); put("contactEmail", i.contactEmail); put("rawText", if (includeRawText) i.rawText else null)
                 put("lastUsed", i.lastUsed?.toString()); put("archived", i.archived); put("createdAt", i.createdAt)
             })
         }

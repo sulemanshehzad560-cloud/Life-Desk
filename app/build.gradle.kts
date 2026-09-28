@@ -13,15 +13,31 @@ android {
         applicationId = "com.lifedesk.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "2.0.0"
         vectorDrawables { useSupportLibrary = true }
+
+        // Firebase (accounts, password reset emails, cloud backup). Supplied at build time, e.g. from GitHub secrets.
+        // When empty the app runs in offline mode without accounts.
+        fun env(name: String) = "\"${System.getenv(name) ?: ""}\""
+        buildConfigField("String", "FIREBASE_API_KEY", env("FIREBASE_API_KEY"))
+        buildConfigField("String", "FIREBASE_APP_ID", env("FIREBASE_APP_ID"))
+        buildConfigField("String", "FIREBASE_PROJECT_ID", env("FIREBASE_PROJECT_ID"))
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", env("GOOGLE_WEB_CLIENT_ID"))
     }
 
     // Release signing is optional: set LIFEDESK_KEYSTORE / _PASSWORD / _ALIAS / _KEY_PASSWORD
     // (e.g. as CI secrets) to produce a signed release APK. Otherwise use the debug APK.
     val keystorePath = System.getenv("LIFEDESK_KEYSTORE")
     signingConfigs {
+        // A fixed debug key (committed on purpose) so every CI build can update the previous install
+        // and so Google Sign-In can be registered with one SHA-1. Use a private release key for the Play Store.
+        getByName("debug") {
+            storeFile = file("lifedesk-debug.keystore")
+            storePassword = "android"
+            keyAlias = "lifedesk"
+            keyPassword = "android"
+        }
         if (keystorePath != null && file(keystorePath).exists()) {
             create("release") {
                 storeFile = file(keystorePath)
@@ -46,7 +62,10 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
 }
 
@@ -74,6 +93,17 @@ dependencies {
 
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("androidx.exifinterface:exifinterface:1.3.7")
+    implementation("androidx.fragment:fragment-ktx:1.8.4")
+    implementation("androidx.biometric:biometric:1.1.0")
+
+    // Accounts (email/password + Google), password reset & verification emails, cloud backup
+    implementation(platform("com.google.firebase:firebase-bom:33.4.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
+    implementation("androidx.credentials:credentials:1.3.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.1.1")
 
     // On-device OCR (bundled model: works offline, no Google Play Services download needed)
     implementation("com.google.mlkit:text-recognition:16.0.1")

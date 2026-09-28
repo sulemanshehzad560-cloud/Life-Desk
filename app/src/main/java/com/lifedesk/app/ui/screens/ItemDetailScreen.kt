@@ -28,6 +28,8 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.CompareArrows
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Event
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.FactCheck
 import androidx.compose.material.icons.outlined.Snooze
@@ -273,6 +275,8 @@ private fun Actions(item: LifeItem, vm: AppViewModel, nav: NavHostController, co
                     IconText(Icons.Outlined.TravelExplore, "Review / cancel")
                 }
                 ActionType.NEW_DOCUMENT -> OutlinedButton(onClick = { nav.navigate("scan?replace=${item.id}") }) { IconText(Icons.Outlined.UploadFile, "Upload new document") }
+                ActionType.ADD_TO_CALENDAR -> OutlinedButton(onClick = { addToCalendar(context, item) }) { IconText(Icons.Outlined.Event, "Add to calendar") }
+                ActionType.SHARE -> OutlinedButton(onClick = { share(context, item) }) { IconText(Icons.Outlined.Share, "Share") }
             }
         }
     }
@@ -296,6 +300,35 @@ private fun email(context: Context, address: String, item: LifeItem) = launch(
         Intent.EXTRA_SUBJECT, listOfNotNull(item.title, item.referenceNumber?.let { "Ref $it" }).joinToString(" — "),
     ),
 )
+
+/** All-day event in Google Calendar (or any calendar app) with the item's details. */
+private fun addToCalendar(context: Context, item: LifeItem) {
+    val date = item.dueDate ?: return
+    val start = date.atStartOfDay(java.time.ZoneOffset.UTC).toInstant().toEpochMilli()
+    val intent = Intent(Intent.ACTION_INSERT).setData(android.provider.CalendarContract.Events.CONTENT_URI)
+        .putExtra(android.provider.CalendarContract.Events.TITLE, "${item.category.emoji} ${item.title} — ${item.kind.label.lowercase()}")
+        .putExtra(android.provider.CalendarContract.EXTRA_EVENT_ALL_DAY, true)
+        .putExtra(android.provider.CalendarContract.EXTRA_EVENT_BEGIN_TIME, start)
+        .putExtra(android.provider.CalendarContract.EXTRA_EVENT_END_TIME, start + 86_400_000L)
+        .putExtra(android.provider.CalendarContract.Events.DESCRIPTION, shareText(item))
+    launch(context, intent)
+}
+
+private fun shareText(item: LifeItem): String = buildString {
+    appendLine("${item.category.emoji} ${item.title}")
+    item.dueDate?.let { appendLine("${item.kind.label}: ${it.pretty()}") }
+    item.amount?.let { appendLine("Amount: ${money(it, item.currency)}") }
+    item.provider?.let { appendLine("Provider: $it") }
+    item.referenceNumber?.let { appendLine("Reference: $it") }
+    item.notes?.let { appendLine(it) }
+    append("— from LifeDesk")
+}
+
+/** Share details (e.g. with a spouse) via WhatsApp, email, etc. */
+private fun share(context: Context, item: LifeItem) {
+    val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, shareText(item))
+    launch(context, Intent.createChooser(send, "Share ${item.title}"))
+}
 
 private fun web(context: Context, query: String) =
     launch(context, Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(query.trim()))))

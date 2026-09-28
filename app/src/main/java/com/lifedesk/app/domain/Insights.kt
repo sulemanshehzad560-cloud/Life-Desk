@@ -73,3 +73,31 @@ fun overview(items: List<LifeItem>, prices: List<PriceRecord>, today: LocalDate)
         assets = active.filter { !it.asset.isNullOrBlank() }.groupBy { it.asset!!.trim() },
     )
 }
+
+data class MonthForecast(val month: java.time.YearMonth, val total: Double, val byCategory: Map<Category, Double>)
+
+/**
+ * Money due in each of the next [months] months, expanding recurring items (a monthly bill appears 12 times,
+ * a yearly renewal once). Overdue items are counted in the current month.
+ */
+fun forecast(items: List<LifeItem>, today: LocalDate, months: Int = 12): List<MonthForecast> {
+    val start = java.time.YearMonth.from(today)
+    val end = start.plusMonths(months.toLong())
+    val buckets = (0 until months).associate { start.plusMonths(it.toLong()) to mutableMapOf<Category, Double>() }
+    for (item in items) {
+        if (item.archived) continue
+        val amount = item.amount ?: continue
+        var date = item.dueDate ?: continue
+        if (java.time.YearMonth.from(date).isBefore(start)) {
+            if (item.recurrence == com.lifedesk.app.data.Recurrence.NONE) date = today
+            else while (java.time.YearMonth.from(date).isBefore(start)) date = item.recurrence.next(date)
+        }
+        var guard = 0
+        while (java.time.YearMonth.from(date).isBefore(end) && guard++ < 60) {
+            buckets[java.time.YearMonth.from(date)]?.merge(item.category, amount, Double::plus)
+            if (item.recurrence == com.lifedesk.app.data.Recurrence.NONE) break
+            date = item.recurrence.next(date)
+        }
+    }
+    return buckets.entries.sortedBy { it.key }.map { (m, cats) -> MonthForecast(m, cats.values.sum(), cats) }
+}

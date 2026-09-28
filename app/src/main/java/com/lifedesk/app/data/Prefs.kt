@@ -15,6 +15,8 @@ data class Settings(
     /** Back up to the signed-in account automatically after changes and daily. */
     val autoBackup: Boolean = true,
     val lastBackupAt: Long = 0L,
+    /** Google account chosen on this phone (used when cloud accounts aren't configured). */
+    val deviceEmail: String = "",
 )
 
 class Prefs(context: Context) {
@@ -30,6 +32,7 @@ class Prefs(context: Context) {
         appLock = sp.getBoolean("appLock", false),
         autoBackup = sp.getBoolean("autoBackup", true),
         lastBackupAt = sp.getLong("lastBackupAt", 0L),
+        deviceEmail = sp.getString("deviceEmail", "") ?: "",
     )
 
     fun update(transform: (Settings) -> Settings) {
@@ -42,6 +45,7 @@ class Prefs(context: Context) {
             .putBoolean("appLock", s.appLock)
             .putBoolean("autoBackup", s.autoBackup)
             .putLong("lastBackupAt", s.lastBackupAt)
+            .putString("deviceEmail", s.deviceEmail)
             .apply()
         _settings.value = s
     }

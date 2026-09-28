@@ -51,6 +51,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -103,7 +106,10 @@ fun AuthScreen(vm: AppViewModel, onDone: () -> Unit, skipLabel: String? = null) 
         Text("SECURE ACCOUNT", style = MaterialTheme.typography.labelSmall, color = com.lifedesk.app.ui.theme.Neon.Cyan)
         AnimatedContent(createMode, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "title") { create ->
             Column {
-                Text(if (create) "Create your LifeDesk account" else "Welcome back", style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    if (!vm.accountsAvailable) "Sign in with Google" else if (create) "Create your LifeDesk account" else "Welcome back",
+                    style = MaterialTheme.typography.headlineMedium,
+                )
                 Text(
                     if (create) "Back up your reminders and restore them on any phone." else "Sign in to restore your reminders.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -111,27 +117,45 @@ fun AuthScreen(vm: AppViewModel, onDone: () -> Unit, skipLabel: String? = null) 
             }
         }
 
+        // Continue with Google: full cloud sign-in when Firebase is configured, otherwise pick the Gmail account on this phone.
+        val picker = androidx.activity.compose.rememberLauncherForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
+        ) { result ->
+            result.data?.getStringExtra(android.accounts.AccountManager.KEY_ACCOUNT_NAME)?.let { vm.useDeviceGoogleAccount(it) }
+        }
+        val shape = RoundedCornerShape(16.dp)
+        Row(
+            Modifier.fillMaxWidth().height(56.dp).clip(shape).background(Color.White)
+                .clickable(enabled = !busy) {
+                    if (vm.googleSignInAvailable) {
+                        (context as? Activity)?.let { vm.signInWithGoogle(it) {} }
+                    } else {
+                        val intent = android.accounts.AccountManager.newChooseAccountIntent(
+                            null, null, arrayOf("com.google"), null, null, null, null,
+                        )
+                        runCatching { picker.launch(intent) }
+                    }
+                },
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center,
+        ) {
+            Text("G", fontWeight = FontWeight.Black, style = MaterialTheme.typography.titleLarge.copy(
+                brush = androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF4285F4), Color(0xFFEA4335), Color(0xFFFBBC05), Color(0xFF34A853))),
+            ))
+            Spacer(Modifier.width(12.dp))
+            Text("Continue with Google", color = Color(0xFF1F1F1F), fontWeight = FontWeight.SemiBold)
+        }
         if (!vm.accountsAvailable) {
             Text(
-                "Accounts aren't switched on in this build yet (Firebase isn't configured). You can use LifeDesk fully offline.",
-                color = MaterialTheme.colorScheme.error,
+                "Uses the Gmail account already on this phone. Cloud backup switches on once LifeDesk's cloud (Firebase) is connected.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
 
-        if (vm.googleSignInAvailable) {
-            OutlinedButton(
-                onClick = { (context as? Activity)?.let { vm.signInWithGoogle(it) {} } },
-                enabled = !busy, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(14.dp),
-            ) {
-                Text("G", fontWeight = FontWeight.Black, color = Color(0xFF4285F4), style = MaterialTheme.typography.titleLarge)
-                Spacer(Modifier.width(12.dp))
-                Text("Continue with Google")
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                HorizontalDivider(Modifier.weight(1f))
-                Text("  or with email  ", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                HorizontalDivider(Modifier.weight(1f))
-            }
+        if (vm.accountsAvailable) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            HorizontalDivider(Modifier.weight(1f))
+            Text("  or with email  ", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            HorizontalDivider(Modifier.weight(1f))
         }
 
         SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
@@ -184,6 +208,7 @@ fun AuthScreen(vm: AppViewModel, onDone: () -> Unit, skipLabel: String? = null) 
                 "We'll email you a link to verify your address. Your reminders stay on your phone; the account adds a private cloud backup.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        }
         }
         skipLabel?.let {
             TextButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) { Text(it) }

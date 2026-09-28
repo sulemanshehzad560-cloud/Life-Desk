@@ -44,6 +44,8 @@ sealed interface ScanState {
 /** The item being reviewed/edited before saving, plus how sure the scanner was. */
 data class Draft(val item: LifeItem, val confidence: Double? = null, val scanned: Boolean = false, val parsed: ParsedDocument? = null)
 
+const val DEVICE_GOOGLE = "google-device"
+
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val lifeApp = app as LifeDeskApp
     private val repo = lifeApp.repository
@@ -51,7 +53,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val accounts = lifeApp.accounts
     private val cloud = lifeApp.cloud
 
-    val account: StateFlow<Account?> = accounts.account
+    /** Firebase account (cloud backup) if signed in there, otherwise the Google account picked on this phone. */
+    val account: StateFlow<Account?> = kotlinx.coroutines.flow.combine(accounts.account, prefs.settings) { cloudAccount, s ->
+        cloudAccount ?: s.deviceEmail.takeIf { it.isNotBlank() }?.let { email ->
+            Account(uid = "device:$email", email = email, name = s.name.ifBlank { null }, emailVerified = true, provider = DEVICE_GOOGLE)
+        }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, accounts.account.value)
+
+    /** True only for a real cloud (Firebase) account — backup/restore need it. */
+    val cloudAccount: StateFlow<Account?> = accounts.account
     val accountsAvailable: Boolean get() = accounts.isConfigured
     val googleSignInAvailable: Boolean get() = accounts.googleEnabled
 
@@ -279,10 +289,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun sendTestReminder() = Reminders.sendTest(getApplication())
 
-    fun loadSampleData() = viewModelScope.launch {
-        repo.loadSampleData(settings.value.currency)
-        _message.value = "Sample data loaded"
-    }
 
     fun clearAll() = viewModelScope.launch {
         repo.clearAll(DocumentStore.dir(getApplication()))
@@ -314,7 +320,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun changed() {
         DueWidget.refresh(getApplication())
-        if (account.value == null || !settings.value.autoBackup) return
+        if (accounts.account.value == null || !settings.value.autoBackup) return
         backupJob?.cancel()
         backupJob = viewModelScope.launch {
             delay(5_000)
@@ -359,7 +365,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshAccount() = viewModelScope.launch { accounts.refresh() }
 
+    /** "Continue with Google" without cloud setup: remember the Gmail account chosen in Android's account picker. */
+    fun useDeviceGoogleAccount(email: String) {
+        val guessName = email.substringBefore('@').split('.', '_', '-').filter { it.isNotBlank() && it.none(Char::isDigit) }
+            .take(2).joinToString(" ") { it.replaceFirstChar(Char::uppercase) }
+        prefs.update { it.copy(deviceEmail = email, name = it.name.ifBlank { guessName }) }
+        _message.value = "Signed in as $email"
+    }
+
     fun signOut() {
+        prefs.update { it.copy(deviceEmail = "") }
         accounts.signOut()
         _message.value = "Signed out. Your data stays on this phone."
     }

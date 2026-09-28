@@ -94,6 +94,6 @@ jobs:
             ### Install on Android
             1. Download **LifeDesk.apk** below on your phone.
             2. Open it. If asked, allow your browser/file manager to "Install unknown apps".
-            3. Tap **Install**, open LifeDesk, and try **Explore with sample data** or scan your first document.
+            3. Tap **Install**, open LifeDesk, continue with your Google account and scan your first document.
 
-            Requires Android 8.0 or newer. All data stays on your phone.
+            Requires Android 8.0 or newer. Documents are processed on your phone.

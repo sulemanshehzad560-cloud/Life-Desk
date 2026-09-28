@@ -120,41 +120,4 @@ class LifeRepository(private val dao: LifeDao) {
         }
         return items.length()
     }
-
-    // ---------- demo ----------
-
-    suspend fun loadSampleData(currency: String, today: LocalDate = LocalDate.now()) {
-        suspend fun add(item: LifeItem, history: List<Pair<Long, Double>> = emptyList()): Long {
-            val id = dao.save(item)
-            val key = item.copy(id = id).priceKey
-            if (key != null) {
-                history.forEach { (daysAgo, amt) -> dao.insertPrice(PriceRecord(key = key, itemId = id, amount = amt, currency = currency, date = today.minusDays(daysAgo))) }
-                item.amount?.let { dao.insertPrice(PriceRecord(key = key, itemId = id, amount = it, currency = currency, date = today)) }
-            }
-            return id
-        }
-        add(LifeItem(title = "Car insurance", category = Category.INSURANCE, provider = "ABC Insurance", amount = 2850.0, currency = currency,
-            dueDate = today.plusDays(12), recurrence = Recurrence.YEARLY, referenceNumber = "MTR-2025-884211", asset = "Toyota Camry",
-            contactPhone = "800 4567"), listOf(365L to 2640.0))
-        add(LifeItem(title = "Emirates NBD credit card", category = Category.CREDIT_CARD, provider = "Emirates NBD", amount = 1240.0,
-            currency = currency, dueDate = today.plusDays(3), recurrence = Recurrence.MONTHLY))
-        add(LifeItem(title = "Passport", category = Category.ID_DOCUMENT, dueDate = today.plusMonths(7), referenceNumber = "AB1234567"))
-        add(LifeItem(title = "Emirates ID", category = Category.ID_DOCUMENT, dueDate = today.plusMonths(14), referenceNumber = "784-1990-1234567-1"))
-        add(LifeItem(title = "Vehicle registration", category = Category.VEHICLE, provider = "RTA", amount = 420.0, currency = currency,
-            dueDate = today.plusDays(61), recurrence = Recurrence.YEARLY, asset = "Toyota Camry"))
-        add(LifeItem(title = "Netflix", category = Category.SUBSCRIPTION, provider = "Netflix", amount = 49.0, currency = currency,
-            dueDate = today.plusDays(9), recurrence = Recurrence.MONTHLY, lastUsed = today.minusDays(21)), listOf(35L to 39.0))
-        add(LifeItem(title = "Adobe", category = Category.SUBSCRIPTION, provider = "Adobe", amount = 86.0, currency = currency,
-            dueDate = today.plusDays(17), recurrence = Recurrence.MONTHLY, lastUsed = today.minusDays(4)))
-        add(LifeItem(title = "Gym membership", category = Category.SUBSCRIPTION, provider = "GymNation", amount = 250.0, currency = currency,
-            dueDate = today.plusDays(5), recurrence = Recurrence.MONTHLY, lastUsed = today.minusDays(47)))
-        add(LifeItem(title = "Cloud storage", category = Category.SUBSCRIPTION, provider = "Google One", amount = 39.0, currency = currency,
-            dueDate = today.plusDays(23), recurrence = Recurrence.MONTHLY, lastUsed = today.minusDays(3)))
-        add(LifeItem(title = "Streaming bundle", category = Category.SUBSCRIPTION, provider = "OSN+", amount = 35.0, currency = currency,
-            dueDate = today.plusDays(14), recurrence = Recurrence.MONTHLY, lastUsed = today.minusDays(64)))
-        add(LifeItem(title = "DEWA electricity & water bill", category = Category.BILL, provider = "DEWA", amount = 812.4, currency = currency,
-            dueDate = today.plusDays(8), recurrence = Recurrence.MONTHLY, referenceNumber = "2012345678"), listOf(30L to 690.0))
-        add(LifeItem(title = "Washing machine warranty", category = Category.WARRANTY, provider = "SuperTech Electronics",
-            dueDate = today.plusDays(43), asset = "Washing machine"))
-    }
 }

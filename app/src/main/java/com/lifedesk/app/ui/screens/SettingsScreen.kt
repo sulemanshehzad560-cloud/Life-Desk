@@ -35,7 +35,6 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.MarkEmailUnread
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.PersonRemove
-import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material3.AlertDialog
@@ -114,7 +113,7 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
                     Text(a?.email ?: "Offline mode · not signed in", style = MaterialTheme.typography.bodySmall, color = Neon.Muted)
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 6.dp)) {
                         if (a != null) {
-                            Tag(if (a.provider == "google") "Google" else "Email", Neon.Cyan)
+                            Tag(if (a.provider == "password") "Email" else "Google", Neon.Cyan)
                             Tag(if (a.emailVerified) "Verified" else "Unverified", if (a.emailVerified) Neon.Green else Neon.Amber)
                         } else Tag("Local only", Neon.Faint)
                         Tag("${items.size} items", Neon.Violet)
@@ -128,7 +127,16 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
             }
         }
 
-        if (a != null) {
+        if (a != null && a.provider == com.lifedesk.app.ui.DEVICE_GOOGLE) {
+            SectionHeader("Account", color = Neon.Green)
+            GlassCard(Modifier.fillMaxWidth(), glow = Neon.Green, padding = 10.dp) {
+                OptionRow(Icons.Outlined.Verified, "Google account on this phone", a.email, Neon.Green)
+                OptionRow(Icons.Outlined.CloudSync, "Cloud backup", "Available once LifeDesk cloud (Firebase) is connected", Neon.Faint)
+                OptionRow(Icons.AutoMirrored.Outlined.Logout, "Sign out", "Your data stays on this phone", Neon.Muted, onClick = { vm.signOut() })
+            }
+        }
+
+        if (a != null && a.provider != com.lifedesk.app.ui.DEVICE_GOOGLE) {
             SectionHeader("Cloud", color = Neon.Green)
             GlassCard(Modifier.fillMaxWidth(), glow = Neon.Green, padding = 10.dp) {
                 if (!a.emailVerified) {
@@ -193,7 +201,6 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
                 onClick = { exportLauncher.launch("lifedesk-backup-${LocalDate.now()}.json") })
             OptionRow(Icons.Outlined.FileUpload, "Import backup file", "Restore from a JSON export", Neon.Cyan,
                 onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) })
-            OptionRow(Icons.Outlined.Science, "Load sample data", "Demo household for exploring", Neon.Violet, onClick = { vm.loadSampleData() })
             OptionRow(Icons.Outlined.DeleteForever, "Delete all data", "Wipe this phone's LifeDesk", Neon.Red, onClick = { confirmClear = true })
         }
 

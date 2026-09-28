@@ -188,7 +188,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
         item { CommandBar(vm) }
 
         if (items.isEmpty()) {
-            item { EmptyHome(onScan = { nav.goTab("scan") }, onSample = { vm.loadSampleData() }) }
+            item { EmptyHome(onScan = { nav.goTab("scan") }) }
             return@LazyColumn
         }
 
@@ -464,7 +464,7 @@ private fun CommandBar(vm: AppViewModel) {
 }
 
 @Composable
-private fun EmptyHome(onScan: () -> Unit, onSample: () -> Unit) {
+private fun EmptyHome(onScan: () -> Unit) {
     GlassCard(Modifier.fillMaxWidth().padding(top = 16.dp), glow = Neon.Violet, padding = 22.dp) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
             RingGauge(0.72f, size = 110.dp, stroke = 6.dp) {
@@ -479,7 +479,6 @@ private fun EmptyHome(onScan: () -> Unit, onSample: () -> Unit) {
             )
             Spacer(Modifier.height(20.dp))
             GradientButton("Scan my first document", onScan, Modifier.fillMaxWidth(), icon = Icons.Outlined.CameraAlt)
-            TextButton(onClick = onSample, modifier = Modifier.padding(top = 6.dp)) { Text("Explore with sample data", color = Neon.Cyan) }
         }
     }
 }

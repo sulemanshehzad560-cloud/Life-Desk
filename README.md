@@ -20,7 +20,6 @@ bills, subscriptions, IDs, insurance, warranties, renewals, appointments and fin
 | 🔎 **Ask anything** | Offline natural-language search: “When does my insurance expire?”, “How much do I spend on subscriptions?”, “Show documents expiring this month”, “What payments are due this week?” |
 | ⏰ **Smart reminders** | Daily check at your chosen time; nudges at 30/14/7/3/1/0 days (plus 6 and 3 months ahead for passports/IDs/visas) and for 3 days after an overdue date. Tap a notification to open the item. |
 | 🔒 **Private** | No account, no server. Data and photos stay on the phone. JSON backup/restore. |
-| 🎛 **Sample data** | “Explore with sample data” fills the app with a realistic UAE household so you can demo it instantly. |
 
 UAE-first defaults (AED, day-first dates, UAE providers & documents); other GCC currencies, USD, EUR, GBP, INR and PKR are supported.
 
@@ -44,7 +43,7 @@ A dark "command center" interface, redesigned end to end:
 
 | | |
 |---|---|
-| 👤 **Accounts** | Create an account with any email (e.g. Gmail) or **Continue with Google**. Verification email on sign-up, **Forgot password** sends a reset link, sign out, delete account. |
+| 👤 **Accounts** | **Continue with Google** works out of the box with the Gmail account on the phone; with Firebase connected it becomes a full cloud account. Email sign-up is also available then. Verification email on sign-up, **Forgot password** sends a reset link, sign out, delete account. |
 | ☁️ **Cloud backup** | Your reminder list is backed up privately to your account (automatically after changes and daily) and restored when you sign in on a new phone. Document photos stay on the phone. |
 | 🔎 **Extract everything** | Every date, amount and labelled field (policy no., plate, Ejari no., account…) is shown after a scan — tap any to use it. |
 | 📅 **Payment schedules** | Tenancy cheques, loan instalments, school terms: one tap creates a reminder per payment. |

@@ -129,7 +129,7 @@ fun LifeDeskRoot(vm: AppViewModel) {
             composable("welcome") {
                 WelcomeScreen(vm) {
                     // With accounts available, offer sign-up right after onboarding (skippable).
-                    val next = if (vm.accountsAvailable && vm.account.value == null) "auth?first=true" else "home"
+                    val next = if (vm.account.value == null) "auth?first=true" else "home"
                     nav.navigate(next) { popUpTo("welcome") { inclusive = true } }
                 }
             }

@@ -37,7 +37,7 @@ Every push runs **Build APK** (`.github/workflows/build-apk.yml`): unit tests + 
 Open the run in the **Actions** tab → download the **LifeDesk-debug-apk** artifact → unzip → install `app-debug.apk`
 on your phone (allow “Install unknown apps” for your browser/file manager).
 
-Push a tag like `v1.0.1` to publish a new GitHub Release; the download link above always points to the newest one.
+Every push to `main` publishes (or refreshes) the GitHub Release `v<versionName>` from `app/build.gradle.kts`. Bump `versionName` (and `versionCode`) to cut a new release; the download link above always points to the newest one.
 
 ### Option B — build locally
 Requirements: JDK 17+, Android SDK (Android Studio Ladybug or newer).

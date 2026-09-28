@@ -13,17 +13,20 @@ android {
         applicationId = "com.lifedesk.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "3.0.0"
+        versionCode = 4
+        versionName = "3.1.0"
         vectorDrawables { useSupportLibrary = true }
 
         // Firebase (accounts, password reset emails, cloud backup). Supplied at build time, e.g. from GitHub secrets.
         // When empty the app runs in offline mode without accounts.
-        fun env(name: String) = "\"${System.getenv(name) ?: ""}\""
-        buildConfigField("String", "FIREBASE_API_KEY", env("FIREBASE_API_KEY"))
-        buildConfigField("String", "FIREBASE_APP_ID", env("FIREBASE_APP_ID"))
-        buildConfigField("String", "FIREBASE_PROJECT_ID", env("FIREBASE_PROJECT_ID"))
-        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", env("GOOGLE_WEB_CLIENT_ID"))
+        // Values from google-services.json. They are client identifiers (not secrets): access is protected by
+        // Firebase Auth + firestore.rules. Environment variables override them for other Firebase projects.
+        fun env(name: String, default: String) = "\"${System.getenv(name)?.takeIf { it.isNotBlank() } ?: default}\""
+        buildConfigField("String", "FIREBASE_API_KEY", env("FIREBASE_API_KEY", "AIzaSyCOCwKc3Dx8WDFYIJ71AWE87gmyZ6JzAHo"))
+        buildConfigField("String", "FIREBASE_APP_ID", env("FIREBASE_APP_ID", "1:474394225948:android:627d20aaaab5e2cb8f1ed9"))
+        buildConfigField("String", "FIREBASE_PROJECT_ID", env("FIREBASE_PROJECT_ID", "firestorerules-db9c0"))
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID",
+            env("GOOGLE_WEB_CLIENT_ID", "474394225948-vunq6m6b7ukc7mg97kg4qovo8c1m0g8c.apps.googleusercontent.com"))
     }
 
     // Release signing is optional: set LIFEDESK_KEYSTORE / _PASSWORD / _ALIAS / _KEY_PASSWORD

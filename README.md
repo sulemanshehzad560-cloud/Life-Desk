@@ -56,7 +56,12 @@ A dark "command center" interface, redesigned end to end:
 | 🔒 **App lock** | Fingerprint / face / phone PIN. |
 | 📱 **Home-screen widget** | The next three things that need attention. |
 
-## Turning on accounts (Firebase, free)
+## Accounts (Firebase, free)
+
+✅ Connected to Firebase project `firestorerules-db9c0` — Google sign-in, email accounts and cloud backup are built into every APK.
+The steps below are only needed to point the app at a different Firebase project (set the four values as GitHub secrets).
+
+### Setting up a Firebase project
 
 Accounts, verification/reset emails and cloud backup use **Firebase Authentication + Firestore**. One-time setup:
 

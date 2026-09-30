@@ -32,6 +32,11 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material.icons.automirrored.outlined.VolumeUp
+import androidx.compose.material.icons.outlined.Close
+import com.lifedesk.app.ui.components.RadarSweep
+import com.lifedesk.app.ui.components.TypewriterText
+import com.lifedesk.app.ui.components.holoBorder
 import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Mic
@@ -143,7 +148,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
         // ---------------------------------------------------------------- hero: life score
         item {
             val glow = if (score >= 80) Neon.Green else if (score >= 50) Neon.Amber else Neon.Red
-            GlassCard(Modifier.fillMaxWidth().padding(top = 16.dp), glow = glow, padding = 18.dp) {
+            GlassCard(Modifier.fillMaxWidth().padding(top = 16.dp).holoBorder(), glow = glow, padding = 18.dp) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val ringColors = when {
                         score >= 80 -> listOf(Neon.Green, Neon.Cyan, Neon.Green)
@@ -151,6 +156,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
                         else -> listOf(Neon.Red, Neon.Pink, Neon.Red)
                     }
                     RingGauge(score / 100f, size = 108.dp, stroke = 10.dp, colors = ringColors) {
+                        RadarSweep(Modifier.matchParentSize(), ringColors.first())
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("$score", fontFamily = Mono, fontWeight = FontWeight.Black, fontSize = 32.sp, color = Neon.Text)
                             Text("LIFE SCORE", fontSize = 8.sp, letterSpacing = 1.4.sp, color = Neon.Muted)
@@ -186,6 +192,8 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
 
         // ---------------------------------------------------------------- command bar
         item { CommandBar(vm) }
+        item { AssistantPanel(vm, nav) }
+        if (items.isNotEmpty()) item { BriefingCard(vm, items, prices, today, cur) }
 
         if (items.isEmpty()) {
             item { EmptyHome(onScan = { nav.goTab("scan") }) }
@@ -210,7 +218,9 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
         if (now.isNotEmpty()) {
             item { SectionHeader("Needs attention now", color = Neon.Red) }
             items(now, key = { "now-${it.id}" }) {
-                SwipeItemRow(it, today, onClick = { nav.navigate("item/${it.id}") }, onComplete = { vm.complete(it) }, onSnooze = { vm.snooze(it, 3) })
+                Box(Modifier.animateItem()) {
+                    SwipeItemRow(it, today, onClick = { nav.navigate("item/${it.id}") }, onComplete = { vm.complete(it) }, onSnooze = { vm.snooze(it, 3) })
+                }
             }
             item {
                 Text(
@@ -222,7 +232,9 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
         if (soon.isNotEmpty()) {
             item { SectionHeader("Coming up", color = Neon.Amber) }
             items(soon.take(6), key = { "soon-${it.id}" }) {
-                SwipeItemRow(it, today, onClick = { nav.navigate("item/${it.id}") }, onComplete = { vm.complete(it) }, onSnooze = { vm.snooze(it, 3) })
+                Box(Modifier.animateItem()) {
+                    SwipeItemRow(it, today, onClick = { nav.navigate("item/${it.id}") }, onComplete = { vm.complete(it) }, onSnooze = { vm.snooze(it, 3) })
+                }
             }
             if (soon.size > 6) item {
                 TextButton(onClick = { nav.navigate("items?status=UPCOMING") }) { Text("See all ${soon.size} upcoming →", color = Neon.Cyan) }
@@ -420,9 +432,14 @@ private fun CommandBar(vm: AppViewModel) {
     val context = LocalContext.current
     val voice = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val spoken = result.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
-        if (!spoken.isNullOrBlank()) { vm.quickAdd(spoken); text = "" }
+        if (!spoken.isNullOrBlank()) { vm.command(spoken, speak = true); text = "" }
     }
-    fun submit() { if (vm.quickAdd(text)) text = "" }
+    fun submit() { if (vm.command(text)) text = "" }
+    // Rotating hint: shows both halves of the bar — adding and asking.
+    val hints = listOf("gym 250 monthly on the 1st", "when does my passport expire?", "DEWA 450 due next friday", "how much on subscriptions?")
+    var hintIndex by remember { mutableIntStateOf(0) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(3500); hintIndex = (hintIndex + 1) % hints.size } }
+    val hint = hints[hintIndex]
     Row(
         Modifier.fillMaxWidth().padding(top = 14.dp).height(56.dp).clip(RoundedCornerShape(18.dp))
             .background(Neon.Surface.copy(alpha = 0.9f))
@@ -435,7 +452,7 @@ private fun CommandBar(vm: AppViewModel) {
         Text("›", fontFamily = Mono, color = Neon.Cyan, fontWeight = FontWeight.Bold)
         Spacer(Modifier.width(6.dp))
         Box(Modifier.weight(1f)) {
-            if (text.isEmpty()) Text("gym 250 monthly on the 1st", fontFamily = Mono, fontSize = 14.sp, color = Neon.Faint, maxLines = 1)
+            if (text.isEmpty()) Text(hint, fontFamily = Mono, fontSize = 14.sp, color = Neon.Faint, maxLines = 1)
             BasicTextField(
                 value = text, onValueChange = { text = it }, singleLine = true,
                 textStyle = TextStyle(fontFamily = Mono, fontSize = 14.sp, color = Neon.Text),
@@ -479,6 +496,79 @@ private fun EmptyHome(onScan: () -> Unit) {
             )
             Spacer(Modifier.height(20.dp))
             GradientButton("Scan my first document", onScan, Modifier.fillMaxWidth(), icon = Icons.Outlined.CameraAlt)
+        }
+    }
+}
+
+
+/** The assistant's answer to a typed or spoken question, with matching items. */
+@Composable
+private fun AssistantPanel(vm: AppViewModel, nav: NavHostController) {
+    val reply by vm.reply.collectAsStateWithLifecycle()
+    androidx.compose.animation.AnimatedVisibility(
+        visible = reply != null,
+        enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
+        exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(),
+    ) {
+        val r = reply ?: return@AnimatedVisibility
+        GlassCard(Modifier.fillMaxWidth().padding(top = 10.dp), glow = Neon.Violet, padding = 14.dp) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.AutoAwesome, null, tint = Neon.Violet, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("ASSISTANT", style = MaterialTheme.typography.labelSmall, color = Neon.Violet, modifier = Modifier.weight(1f))
+                IconButton(onClick = { vm.speak(r.answer) }, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.AutoMirrored.Outlined.VolumeUp, "Read aloud", tint = Neon.Cyan, modifier = Modifier.size(18.dp))
+                }
+                IconButton(onClick = { vm.clearReply() }, modifier = Modifier.size(32.dp)) {
+                    Icon(Icons.Outlined.Close, "Close", tint = Neon.Muted, modifier = Modifier.size(18.dp))
+                }
+            }
+            Text("› ${r.question}", fontFamily = Mono, fontSize = 12.sp, color = Neon.Muted, modifier = Modifier.padding(top = 4.dp))
+            TypewriterText(r.answer, Modifier.padding(top = 6.dp), MaterialTheme.typography.titleMedium, Neon.Text)
+            r.items.forEach { item ->
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(12.dp)).background(Neon.Surface.copy(alpha = 0.6f))
+                        .clickable { nav.navigate("item/${item.id}") }.padding(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    CategoryTile(item.category, 28.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(item.title, Modifier.weight(1f), color = Neon.Text, maxLines = 1, fontSize = 14.sp)
+                    Text(item.daysLeft(LocalDate.now())?.let { d -> if (d < 0) "late" else "${d}d" } ?: "—",
+                        fontFamily = Mono, fontSize = 12.sp, color = urgencyColor(item.urgency(LocalDate.now())))
+                }
+            }
+        }
+    }
+}
+
+/** Daily AI briefing: a few sentences about what matters now, typed out and optionally read aloud. */
+@Composable
+private fun BriefingCard(vm: AppViewModel, items: List<LifeItem>, prices: List<com.lifedesk.app.data.PriceRecord>, today: LocalDate, cur: String) {
+    val lines = remember(items, prices) { com.lifedesk.app.domain.Briefing.build(items, prices, today, cur) }
+    SectionHeader("AI briefing", color = Neon.Pink)
+    GlassCard(Modifier.fillMaxWidth(), glow = Neon.Pink, padding = 16.dp) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            LivePulse(Neon.Pink)
+            Spacer(Modifier.width(8.dp))
+            Text("GENERATED ${java.time.LocalTime.now().withSecond(0).withNano(0)}", style = MaterialTheme.typography.labelSmall,
+                color = Neon.Muted, modifier = Modifier.weight(1f))
+            Row(
+                Modifier.clip(RoundedCornerShape(10.dp)).background(Neon.Pink.copy(alpha = 0.15f))
+                    .clickable { vm.speak(lines.joinToString(" ")) }.padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.AutoMirrored.Outlined.VolumeUp, null, tint = Neon.Pink, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Read aloud", fontSize = 12.sp, color = Neon.Pink, fontWeight = FontWeight.SemiBold)
+            }
+        }
+        lines.forEachIndexed { i, line ->
+            Row(Modifier.padding(top = 10.dp)) {
+                Text("0${i + 1}", fontFamily = Mono, fontSize = 11.sp, color = Neon.Pink, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
+                Spacer(Modifier.width(10.dp))
+                TypewriterText(line, style = MaterialTheme.typography.bodyMedium, color = Neon.Text, speedMs = 10)
+            }
         }
     }
 }

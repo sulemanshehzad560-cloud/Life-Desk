@@ -170,8 +170,12 @@ fun DateField(label: String, date: LocalDate?, onChange: (LocalDate?) -> Unit, m
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun SwipeItemRow(item: LifeItem, today: LocalDate, onClick: () -> Unit, onComplete: () -> Unit, onSnooze: () -> Unit) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val state = androidx.compose.material3.rememberSwipeToDismissBoxState(
         confirmValueChange = { value ->
+            if (value != androidx.compose.material3.SwipeToDismissBoxValue.Settled) {
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+            }
             when (value) {
                 androidx.compose.material3.SwipeToDismissBoxValue.StartToEnd -> onComplete()
                 androidx.compose.material3.SwipeToDismissBoxValue.EndToStart -> onSnooze()

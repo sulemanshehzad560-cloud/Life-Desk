@@ -29,6 +29,12 @@ UAE-first defaults (AED, day-first dates, UAE providers & documents); other GCC 
 
 Open the file on your Android phone (Android 8.0+) and allow "Install unknown apps" when asked.
 
+## New in 4.0 — futuristic upgrade
+
+- **AI briefing** on Home: a daily summary of what matters (payments this week with totals, upcoming renewals and price rises, expiring documents, savings) that types itself out and can be **read aloud**.
+- **Voice & text assistant** in the command bar: ask “When does my passport expire?” or “How much do I spend on subscriptions?” — typed or spoken — and get an answer card (spoken back for voice). Anything that isn't a question is added as a reminder.
+- **Living interface:** drifting particle field, holographic animated border on the hero card, radar sweep on the Life Score, press-to-shrink cards with haptic ticks, animated list items, haptic feedback on swipe, and zoom/fade screen transitions.
+
 ## New in 3.0 — full redesign
 
 A dark "command center" interface, redesigned end to end:

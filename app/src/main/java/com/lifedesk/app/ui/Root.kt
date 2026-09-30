@@ -125,6 +125,13 @@ fun LifeDeskRoot(vm: AppViewModel) {
             navController = nav,
             startDestination = startRoute,
             modifier = Modifier.padding(padding),
+            // Futuristic, subtle: screens fade and zoom in slightly.
+            enterTransition = { androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260)) +
+                androidx.compose.animation.scaleIn(androidx.compose.animation.core.tween(260), initialScale = 0.96f) },
+            exitTransition = { androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(180)) },
+            popEnterTransition = { androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(260)) },
+            popExitTransition = { androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(180)) +
+                androidx.compose.animation.scaleOut(androidx.compose.animation.core.tween(180), targetScale = 0.96f) },
         ) {
             composable("welcome") {
                 WelcomeScreen(vm) {

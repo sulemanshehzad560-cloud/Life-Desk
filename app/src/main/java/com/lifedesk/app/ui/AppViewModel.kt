@@ -216,6 +216,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return true
     }
 
+    // ---------- assistant ----------
+
+    /** Last answer from the assistant (question typed or spoken into the command bar). */
+    data class AssistantReply(val question: String, val answer: String, val items: List<LifeItem>)
+
+    private val _reply = MutableStateFlow<AssistantReply?>(null)
+    val reply: StateFlow<AssistantReply?> = _reply.asStateFlow()
+    fun clearReply() { _reply.value = null }
+
+    /**
+     * The command bar: questions ("when does my passport expire?") are answered, anything else is added as a reminder.
+     * Returns true if the input was handled. Spoken input gets a spoken answer.
+     */
+    fun command(text: String, speak: Boolean = false): Boolean {
+        if (text.isBlank()) return false
+        if (com.lifedesk.app.domain.Briefing.isQuestion(text)) {
+            val r = com.lifedesk.app.domain.QueryEngine.run(text, items.value, LocalDate.now(), settings.value.currency)
+            val answer = r.answer ?: if (r.items.isEmpty()) "I couldn't find anything for that." else "Here's what I found."
+            _reply.value = AssistantReply(text.trim(), answer, r.items.take(4))
+            if (speak) Speaker.speak(getApplication(), answer)
+            return true
+        }
+        _reply.value = null
+        return quickAdd(text)
+    }
+
+    fun speak(text: String) = Speaker.speak(getApplication(), text)
+
     /** One reminder per instalment, e.g. the 4 cheques of a tenancy contract. */
     fun saveSchedule(base: LifeItem, schedule: List<Pair<LocalDate, Double>>, onSaved: () -> Unit) {
         viewModelScope.launch {

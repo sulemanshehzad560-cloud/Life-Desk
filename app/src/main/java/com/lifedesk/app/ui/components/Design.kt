@@ -48,6 +48,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -138,7 +148,7 @@ fun GlassCard(
             .clip(shape)
             .background(Brush.verticalGradient(listOf(Neon.Surface2.copy(alpha = 0.92f), Neon.Surface.copy(alpha = 0.85f))))
             .border(1.dp, Brush.linearGradient(listOf(glow.copy(alpha = 0.45f), Neon.Stroke.copy(alpha = 0.6f), Neon.Stroke.copy(alpha = 0.25f))), shape)
-            .let { if (onClick != null) it.clickable(onClick = onClick) else it }
+            .let { if (onClick != null) it.pressable(onClick) else it }
             .padding(padding),
         content = content,
     )
@@ -165,6 +175,16 @@ fun NeonBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.
                 Brush.radialGradient(listOf(Neon.Blue.copy(alpha = 0.10f), Color.Transparent), center = Offset(w * 0.3f, h * (0.85f - 0.1f * drift)), radius = w * 0.9f),
                 radius = w * 0.9f, center = Offset(w * 0.3f, h * (0.85f - 0.1f * drift)),
             )
+            // Drifting particles: a slow starfield of cyan/violet specks.
+            for (i in 0 until 46) {
+                val seed = (i * 7919) % 1000 / 1000f
+                val seed2 = (i * 104729) % 1000 / 1000f
+                val px = (seed * w + drift * w * 0.08f * (if (i % 2 == 0) 1 else -1) + w) % w
+                val py = (seed2 * h - drift * h * 0.12f * (1 + i % 3) + h * 2) % h
+                val r = (0.6f + (i % 4) * 0.45f).dp.toPx()
+                val c = if (i % 3 == 0) Neon.Violet else Neon.Cyan
+                drawCircle(c.copy(alpha = 0.10f + (i % 5) * 0.05f), r, Offset(px, py))
+            }
             val step = 36.dp.toPx()
             val line = Color.White.copy(alpha = 0.025f)
             var x = 0f
@@ -422,4 +442,70 @@ fun Modifier.viewfinder(color: Color, corner: Dp = 26.dp, length: Dp = 34.dp, wi
     corner(0f, size.height, 1f, -1f)
     corner(size.width, size.height, -1f, -1f)
     drawRoundRect(color.copy(alpha = 0.05f), cornerRadius = CornerRadius(r, r))
+}
+
+
+// ---------------------------------------------------------------- futuristic effects
+
+/** Animated holographic border: a light sweep that travels around the card edge. */
+@Composable
+fun Modifier.holoBorder(shape: Shape = RoundedCornerShape(22.dp), width: Dp = 1.5.dp): Modifier {
+    val t = rememberInfiniteTransition(label = "holo")
+    val angle by t.animateFloat(0f, 360f, infiniteRepeatable(tween(5_000, easing = LinearEasing)), label = "holoAngle")
+    return this.border(width, HoloBrush(angle), shape)
+}
+
+/** Sweep gradient (cyan → violet → pink) rotated by [angle] degrees around the centre. */
+private class HoloBrush(private val angle: Float) : androidx.compose.ui.graphics.ShaderBrush() {
+    override fun createShader(size: Size): androidx.compose.ui.graphics.Shader {
+        val c = Offset(size.width / 2, size.height / 2)
+        val shader = androidx.compose.ui.graphics.SweepGradientShader(
+            c,
+            listOf(Neon.Cyan, Neon.Violet.copy(alpha = 0.15f), Neon.Pink, Neon.Cyan.copy(alpha = 0.1f), Neon.Cyan),
+        )
+        shader.setLocalMatrix(android.graphics.Matrix().apply { setRotate(angle, c.x, c.y) })
+        return shader
+    }
+    override fun equals(other: Any?) = other is HoloBrush && other.angle == angle
+    override fun hashCode() = angle.hashCode()
+}
+
+/** Shrinks slightly while pressed and gives a light haptic tick — makes cards feel physical. */
+@Composable
+fun Modifier.pressable(onClick: () -> Unit): Modifier {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.965f else 1f, tween(140), label = "press")
+    val haptic = LocalHapticFeedback.current
+    return this.graphicsLayer { scaleX = scale; scaleY = scale }
+        .clickable(interactionSource = interaction, indication = null) {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            onClick()
+        }
+}
+
+/** Types [text] out character by character, like a terminal. Re-types when the text changes. */
+@Composable
+fun TypewriterText(text: String, modifier: Modifier = Modifier, style: TextStyle = MaterialTheme.typography.bodyMedium, color: Color = Neon.Text, speedMs: Long = 14) {
+    var shown by remember(text) { mutableIntStateOf(0) }
+    LaunchedEffect(text) {
+        while (shown < text.length) { kotlinx.coroutines.delay(speedMs); shown++ }
+    }
+    val cursor = if (shown < text.length) "▍" else ""
+    Text(text.take(shown) + cursor, modifier = modifier, style = style, color = color)
+}
+
+/** A rotating radar sweep, drawn over a ring gauge. */
+@Composable
+fun RadarSweep(modifier: Modifier = Modifier, color: Color = Neon.Cyan) {
+    val t = rememberInfiniteTransition(label = "radar")
+    val angle by t.animateFloat(0f, 360f, infiniteRepeatable(tween(3_200, easing = LinearEasing)), label = "radarAngle")
+    Canvas(modifier) {
+        rotate(angle) {
+            drawCircle(
+                Brush.sweepGradient(listOf(Color.Transparent, Color.Transparent, color.copy(alpha = 0.0f), color.copy(alpha = 0.28f))),
+                radius = size.minDimension / 2 * 0.78f,
+            )
+        }
+    }
 }

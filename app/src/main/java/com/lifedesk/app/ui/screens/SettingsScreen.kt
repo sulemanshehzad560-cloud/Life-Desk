@@ -211,7 +211,7 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
         }
 
         SectionHeader("About", color = Neon.Faint)
-        OptionRow(Icons.Outlined.Info, "LifeDesk 3.0", "Everything in your life that has a date, payment or deadline", Neon.Muted)
+        OptionRow(Icons.Outlined.Info, "LifeDesk 4.0", "Everything in your life that has a date, payment or deadline", Neon.Muted)
         Text(
             "Documents are read on-device. Photos never leave your phone; with an account only your reminder list is backed up, privately.",
             style = MaterialTheme.typography.bodySmall, color = Neon.Faint, fontFamily = Mono, fontSize = 11.sp,

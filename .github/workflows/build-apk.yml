@@ -81,7 +81,8 @@ jobs:
           # Stable name so https://github.com/<owner>/<repo>/releases/latest/download/LifeDesk.apk always works.
           cp app/build/outputs/apk/debug/app-debug.apk dist/LifeDesk.apk
           if ls app/build/outputs/bundle/release/*.aab >/dev/null 2>&1; then
-            cp app/build/outputs/bundle/release/*.aab dist/LifeDesk-playstore.aab
+            code=$(sed -nE 's/.*versionCode = ([0-9]+).*/\1/p' app/build.gradle.kts)
+            cp app/build/outputs/bundle/release/*.aab "dist/LifeDesk-playstore-${{ steps.version.outputs.tag }}-code${code}.aab"
             cp app/build/outputs/apk/release/*.apk dist/LifeDesk-release.apk
           fi
 
@@ -106,4 +107,4 @@ jobs:
 
             Requires Android 8.0 or newer. Documents are processed on your phone.
 
-            **LifeDesk-playstore.aab** (when present) is the signed bundle to upload in Google Play Console.
+            **LifeDesk-playstore-…aab** (when present) is the signed bundle to upload in Google Play Console.

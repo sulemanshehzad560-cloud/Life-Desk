@@ -16,7 +16,6 @@ import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.OAuthProvider
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import com.lifedesk.app.BuildConfig
@@ -39,7 +38,7 @@ class AuthException(message: String) : Exception(message)
  * Accounts via Firebase Authentication:
  *  - email + password sign-up (a verification email is sent by Firebase),
  *  - "forgot password" (Firebase emails a reset link),
- *  - Continue with Google (Credential Manager, falling back to the Firebase browser flow).
+ *  - Continue with Google (Credential Manager → Firebase signInWithCredential).
  * Firebase is configured from build-time values; without them the app runs in offline mode.
  */
 class Accounts(private val context: Context) {
@@ -109,49 +108,62 @@ class Accounts(private val context: Context) {
     }
 
     /**
-     * Continue with Google: first the phone's native Google account sheet (Credential Manager). If that fails for any
-     * reason (some phones report a rejected app, or an unregistered signing key, only as "cancelled"), fall back to
-     * Google's sign-in page in a browser tab via Firebase, which doesn't depend on the app's signing key.
+     * Continue with Google, natively: the phone's Google account picker (Credential Manager) returns an ID token for
+     * our web client ID, which Firebase exchanges via signInWithCredential. If Google refuses, the message includes
+     * Google's reason and the SHA-1 this installed copy is signed with, to compare with the Android OAuth clients.
      */
     suspend fun signInWithGoogle(activity: Activity) = guard {
         if (!googleEnabled) throw AuthException("Google sign-in isn't configured in this build.")
-        val token = runCatching { nativeGoogleToken(activity) }.getOrNull()
-        if (token != null) {
-            requireAuth().signInWithCredential(GoogleAuthProvider.getCredential(token, null)).await()
-        } else {
-            val a = requireAuth()
-            try {
-                a.pendingAuthResult?.await()
-                    ?: a.startActivityForSignInWithProvider(activity, OAuthProvider.newBuilder("google.com").build()).await()
-            } catch (e: Exception) {
-                if (e.message?.contains("cancel", ignoreCase = true) == true) throw AuthException("Sign-in cancelled.")
-                throw e
-            }
-        }
-        refresh()
-    }
-
-    private suspend fun nativeGoogleToken(activity: Activity): String {
         val manager = CredentialManager.create(activity)
         suspend fun ask(option: androidx.credentials.CredentialOption) =
             manager.getCredential(activity, GetCredentialRequest.Builder().addCredentialOption(option).build())
         val response = try {
             ask(GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_WEB_CLIENT_ID).build())
-        } catch (_: Exception) {
-            ask(
-                com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
-                    .setServerClientId(BuildConfig.GOOGLE_WEB_CLIENT_ID)
-                    .setFilterByAuthorizedAccounts(false)
-                    .setAutoSelectEnabled(false)
-                    .build()
-            )
+        } catch (first: Exception) {
+            try {
+                ask(
+                    com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
+                        .setServerClientId(BuildConfig.GOOGLE_WEB_CLIENT_ID)
+                        .setFilterByAuthorizedAccounts(false)
+                        .setAutoSelectEnabled(false)
+                        .build()
+                )
+            } catch (second: Exception) {
+                throw AuthException(googleFailure(activity, first, second))
+            }
         }
         val credential = response.credential
         if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
             throw AuthException("Unexpected sign-in response.")
         }
-        return GoogleIdTokenCredential.createFrom(credential.data).idToken
+        val token = GoogleIdTokenCredential.createFrom(credential.data).idToken
+        requireAuth().signInWithCredential(GoogleAuthProvider.getCredential(token, null)).await()
+        refresh()
     }
+
+    private fun googleFailure(context: Context, first: Exception, second: Exception): String {
+        fun describe(e: Exception) = "${e.javaClass.simpleName}: ${e.message ?: "no details"}"
+        return "Google sign-in didn't complete.\n" +
+            "1) ${describe(first)}\n2) ${describe(second)}\n" +
+            "App signing SHA-1: ${signingSha1(context) ?: "unknown"}\n" +
+            "If you didn't cancel, add this SHA-1 to the Android OAuth client for ${context.packageName} in Firebase."
+    }
+
+    /** SHA-1 of the certificate this installed copy is signed with (Play re-signs apps with its own key). */
+    private fun signingSha1(context: Context): String? = runCatching {
+        val pm = context.packageManager
+        val certs = if (android.os.Build.VERSION.SDK_INT >= 28) {
+            val info = pm.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES)
+            val si = info.signingInfo ?: return@runCatching null
+            if (si.hasMultipleSigners()) si.apkContentsSigners else si.signingCertificateHistory
+        } else {
+            @Suppress("DEPRECATION")
+            pm.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_SIGNATURES).signatures
+        } ?: return@runCatching null
+        val cert = certs.lastOrNull() ?: return@runCatching null
+        java.security.MessageDigest.getInstance("SHA-1").digest(cert.toByteArray())
+            .joinToString(":") { "%02X".format(it) }
+    }.getOrNull()
 
     fun signOut() {
         auth?.signOut()

@@ -15,7 +15,7 @@ android {
         targetSdk = 36
         // Every CI build gets a unique, ever-increasing code (Google Play rejects reused codes); local builds use 20.
         versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()?.let { 100 + it } ?: 20
-        versionName = "4.4.0"
+        versionName = "4.4.1"
         vectorDrawables { useSupportLibrary = true }
 
         // Firebase (accounts, password reset emails, cloud backup). Supplied at build time, e.g. from GitHub secrets.

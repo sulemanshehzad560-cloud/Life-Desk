@@ -13,8 +13,8 @@ android {
         applicationId = "com.lifedesk.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 12
-        versionName = "4.3.1"
+        versionCode = 13
+        versionName = "4.3.2"
         vectorDrawables { useSupportLibrary = true }
 
         // Firebase (accounts, password reset emails, cloud backup). Supplied at build time, e.g. from GitHub secrets.

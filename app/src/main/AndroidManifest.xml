@@ -123,6 +123,11 @@
                 android:resource="@xml/due_widget_info" />
         </receiver>
 
+        <!-- AdMob app ID -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-4940350948200557~1932932640" />
+
         <meta-data
             android:name="com.google.mlkit.vision.DEPENDENCIES"
             android:value="ocr" />

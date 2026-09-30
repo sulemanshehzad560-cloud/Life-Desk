@@ -24,17 +24,22 @@ A daily briefing of what matters, read aloud on request. Ask “when does my pas
 12-month cash-flow forecast, spending by category, price-increase alerts and forgotten subscriptions.
 
 🔒 PRIVATE BY DESIGN
-Documents are processed on your phone. Optional account with Gmail/email for private cloud backup. App lock with fingerprint. No ads, no tracking.
+Documents are processed on your phone. Optional account with Gmail/email for private cloud backup. App lock with fingerprint. Free, supported by a small banner ad.
 
 Also: home-screen widget, calendar export, JSON backup, dark futuristic interface.
 
 **Category:** Productivity · **Tags:** reminders, bills, finance organiser
 **Privacy policy URL:** https://github.com/sulemanshehzad560-cloud/Life-Desk/blob/main/PRIVACY.md
 
+## App content declarations
+- **Ads:** Yes, my app contains ads.
+- **Advertising ID:** Yes, uses advertising ID. Purpose: **Advertising or marketing** (and Analytics, as used by AdMob).
+
 ## Data safety form answers
 - Data collected: **Email address** and **User IDs** (account management, only if the user signs in); **Other user-generated content** (reminder list backup, only if signed in). All of it is encrypted in transit and the user can request deletion (in-app *Delete account*).
-- Data shared with third parties: **No**.
-- Photos, audio, location, contacts: **not collected** (processed on device only).
+- Collected **and shared with Google AdMob** for advertising (automatically, by the ads SDK):
+  - **Device or other IDs** (advertising ID), **Approximate location**, **App interactions**, **Diagnostics** (crash logs, performance). Purpose: Advertising or marketing, Analytics, Fraud prevention. Encrypted in transit.
+- Photos, audio, precise location, contacts: **not collected** (documents are processed on device only).
 
 ## Content rating
 Utility / productivity app. No violence, gambling, user-to-user chat or location sharing.

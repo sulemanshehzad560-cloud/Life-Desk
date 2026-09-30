@@ -9,6 +9,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.fragment.app.FragmentActivity
+import com.lifedesk.app.ads.Ads
 import com.lifedesk.app.notify.Reminders
 import com.lifedesk.app.ui.AppViewModel
 import com.lifedesk.app.ui.LifeDeskRoot
@@ -23,6 +24,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         if (savedInstanceState == null) handleIntent(intent)
+        Ads.gatherConsent(this)
         setContent {
             LifeDeskTheme { LifeDeskRoot(vm) }
         }

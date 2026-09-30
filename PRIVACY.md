@@ -1,6 +1,6 @@
 # LifeDesk Privacy Policy
 
-_Last updated: 30 September 2026_
+_Last updated: 1 October 2026_
 
 LifeDesk helps you track bills, documents, renewals, warranties and subscriptions. This policy explains what the app does with your information.
 
@@ -16,14 +16,22 @@ If you create an account or continue with Google, LifeDesk uses **Google Firebas
 
 Document photos are **not** included in cloud backups. You can use LifeDesk without an account; nothing is then sent anywhere.
 
+## Advertising
+LifeDesk is free and shows a small banner ad on some screens, served by **Google AdMob**.
+- To show and measure ads, Google's ads SDK may collect your device's **advertising ID**, your approximate location (from your IP address), app interaction and diagnostic data. See how Google uses this data: https://policies.google.com/technologies/partner-sites
+- In the EEA, UK and Switzerland we ask for your consent first using Google's consent form. You can change your choice any time in **Settings → Ad privacy choices**.
+- You can reset or delete your advertising ID, or opt out of personalised ads, in your phone's **Settings → Google → Ads** (or **Privacy → Ads**).
+- Ads never see your reminders, documents, photos or account data.
+
 ## What we don't do
-- No advertising, no ad IDs, no tracking or analytics SDKs.
-- We do not sell or share your data with anyone.
+- No analytics or tracking SDKs other than the ads SDK described above.
+- We do not sell your data. Your reminders and documents are never shared with advertisers.
 
 ## Permissions
 - **Notifications:** to remind you before due dates.
 - **Camera** (through the system camera/photo picker): to scan documents you choose.
-- **Internet:** only for sign-in and optional cloud backup.
+- **Internet:** for sign-in, optional cloud backup and loading ads.
+- **Advertising ID:** used by Google AdMob to serve ads (see *Advertising*).
 - **Biometrics:** optional app lock.
 
 ## Deleting your data

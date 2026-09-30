@@ -48,6 +48,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -228,6 +229,16 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
         GlassCard(Modifier.fillMaxWidth(), glow = Neon.Pink, padding = 10.dp) {
             OptionRow(Icons.Outlined.DataObject, "Share to LifeDesk", "From Gmail, WhatsApp, Files: any email, PDF or photo", Neon.Pink)
             OptionRow(Icons.Outlined.Widgets, "Home-screen widget", "Long-press home → Widgets → LifeDesk", Neon.Cyan)
+        }
+
+        val adPrivacyRequired by com.lifedesk.app.ads.Ads.privacyOptionsRequired.collectAsState()
+        if (adPrivacyRequired) {
+            SectionHeader("Ads", color = Neon.Faint)
+            GlassCard(Modifier.fillMaxWidth(), padding = 10.dp) {
+                OptionRow(Icons.Outlined.Info, "Ad privacy choices", "Change your consent for personalised ads", Neon.Muted, onClick = {
+                    (context as? android.app.Activity)?.let { com.lifedesk.app.ads.Ads.showPrivacyOptions(it) }
+                })
+            }
         }
 
         SectionHeader("About", color = Neon.Faint)

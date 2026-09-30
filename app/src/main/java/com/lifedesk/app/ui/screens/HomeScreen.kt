@@ -81,6 +81,7 @@ import com.lifedesk.app.domain.relativeDays
 import com.lifedesk.app.domain.urgency
 import com.lifedesk.app.ui.AppViewModel
 import com.lifedesk.app.ui.components.CategoryTile
+import com.lifedesk.app.ui.components.BannerAd
 import com.lifedesk.app.ui.components.GlassCard
 import com.lifedesk.app.ui.components.GlowDot
 import com.lifedesk.app.ui.components.GradientButton
@@ -211,6 +212,7 @@ fun HomeScreen(vm: AppViewModel, nav: NavHostController) {
 
         // ---------------------------------------------------------------- 14-day timeline
         item { Timeline(items, nav, today) }
+        item { BannerAd() }
 
         // ---------------------------------------------------------------- attention lists
         val now = o.attention.filter { it.urgency(today) in setOf(Urgency.OVERDUE, Urgency.URGENT) }

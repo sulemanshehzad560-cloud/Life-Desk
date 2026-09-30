@@ -55,6 +55,7 @@ import com.lifedesk.app.domain.money
 import com.lifedesk.app.ui.AppViewModel
 import com.lifedesk.app.ui.components.CategoryTile
 import com.lifedesk.app.ui.components.Donut
+import com.lifedesk.app.ui.components.BannerAd
 import com.lifedesk.app.ui.components.GlassCard
 import com.lifedesk.app.ui.components.GlowDot
 import com.lifedesk.app.ui.components.GradientButton
@@ -180,6 +181,7 @@ fun SubscriptionsScreen(vm: AppViewModel, nav: NavHostController) {
                 }
             }
         }
+        item { BannerAd() }
         if (subs.isEmpty()) item {
             Text("No subscriptions yet. Scan a receipt or add one below.", color = Neon.Muted, modifier = Modifier.padding(vertical = 16.dp))
         }

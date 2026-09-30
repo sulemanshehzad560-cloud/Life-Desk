@@ -7,4 +7,5 @@
     <string name="voice_shortcut_short">Voice command</string>
     <string name="voice_shortcut_long">Speak a LifeDesk command</string>
     <string name="voice_tile">LifeDesk voice</string>
+    <string name="channel_voice">Voice command results</string>
 </resources>

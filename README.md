@@ -29,6 +29,10 @@ UAE-first defaults (AED, day-first dates, UAE providers & documents); other GCC 
 
 Open the file on your Android phone (Android 8.0+) and allow "Install unknown apps" when asked.
 
+## New in 4.2 — pop-up reminders
+
+Reminders now **pop up on screen** (heads-up notifications) with sound and vibration, with **Done** and **Snooze** buttons right on the pop-up. If your phone hides them, Settings → *Pop-up style* opens the switch directly. Voice-command confirmations stay quiet, since the answer is already spoken.
+
 ## New in 4.1 — hands-free voice
 
 Talk to LifeDesk without opening it. A small floating panel listens, carries out the command, **answers out loud**, posts a confirmation notification and closes.

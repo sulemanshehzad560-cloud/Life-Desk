@@ -35,14 +35,29 @@ import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
 object Reminders {
-    const val CHANNEL = "reminders"
+    /** High-importance channel so reminders pop up on screen (heads-up) with sound and vibration. */
+    const val CHANNEL = "reminders_popup"
+    /** Quiet channel for voice-command confirmations (the answer is already spoken aloud). */
+    const val CHANNEL_VOICE = "voice"
+    private const val LEGACY_CHANNEL = "reminders"
     const val EXTRA_ITEM_ID = "itemId"
     private const val WORK_NAME = "daily-reminders"
 
     fun createChannel(context: Context) {
-        val channel = NotificationChannel(CHANNEL, context.getString(R.string.channel_reminders), NotificationManager.IMPORTANCE_DEFAULT)
-            .apply { description = context.getString(R.string.channel_reminders_desc) }
-        context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        val manager = context.getSystemService(NotificationManager::class.java)
+        // A channel's importance can't be raised after creation, so older installs get a new one.
+        manager.deleteNotificationChannel(LEGACY_CHANNEL)
+        val channel = NotificationChannel(CHANNEL, context.getString(R.string.channel_reminders), NotificationManager.IMPORTANCE_HIGH)
+            .apply {
+                description = context.getString(R.string.channel_reminders_desc)
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 250, 150, 250)
+                enableLights(true)
+                lightColor = 0xFF22D3EE.toInt()
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PRIVATE
+            }
+        val voice = NotificationChannel(CHANNEL_VOICE, context.getString(R.string.channel_voice), NotificationManager.IMPORTANCE_LOW)
+        manager.createNotificationChannels(listOf(channel, voice))
     }
 
     /** Runs [ReminderWorker] once a day at [hour]:00 local time. */
@@ -70,15 +85,20 @@ object Reminders {
         (Build.VERSION.SDK_INT < 33 || ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) &&
             NotificationManagerCompat.from(context).areNotificationsEnabled()
 
-    fun notify(context: Context, id: Int, title: String, body: String, itemId: Long?, doneLabel: String = "Done") {
+    fun notify(context: Context, id: Int, title: String, body: String, itemId: Long?, doneLabel: String = "Done", channel: String = CHANNEL) {
         if (!canNotify(context)) return
         val intent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             itemId?.let { putExtra(EXTRA_ITEM_ID, it) }
         }
         val pending = PendingIntent.getActivity(context, id, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val notification = NotificationCompat.Builder(context, CHANNEL)
+        val popup = channel == CHANNEL
+        val notification = NotificationCompat.Builder(context, channel)
             .setSmallIcon(R.drawable.ic_notification)
+            .setColor(0xFF22D3EE.toInt())
+            .setPriority(if (popup) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_LOW)
+            .setCategory(if (popup) NotificationCompat.CATEGORY_REMINDER else NotificationCompat.CATEGORY_STATUS)
+            .setDefaults(if (popup) NotificationCompat.DEFAULT_ALL else 0)
             .setContentTitle(title)
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))

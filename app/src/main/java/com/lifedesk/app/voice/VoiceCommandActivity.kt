@@ -119,7 +119,7 @@ class VoiceCommandActivity : ComponentActivity() {
             answer = reply
             status = "Done"
             Speaker.speak(applicationContext, reply)
-            Reminders.notify(applicationContext, NOTIFICATION_ID, "LifeDesk: $text", reply, itemId = null)
+            Reminders.notify(applicationContext, NOTIFICATION_ID, "LifeDesk: $text", reply, itemId = null, channel = Reminders.CHANNEL_VOICE)
             delay(4_000L + reply.length * 55L)
             finish()
         }

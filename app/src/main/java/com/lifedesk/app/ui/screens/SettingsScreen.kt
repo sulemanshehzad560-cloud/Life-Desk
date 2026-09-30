@@ -182,6 +182,13 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
                     Modifier.fillMaxWidth().padding(top = 12.dp), brush = Neon.Warm, icon = Icons.Outlined.NotificationsActive)
             } else {
                 OptionRow(Icons.Outlined.NotificationsActive, "Send a test reminder", "Check notifications work", Neon.Amber, onClick = { vm.sendTestReminder() })
+                OptionRow(Icons.Outlined.NotificationsActive, "Pop-up style", "Make sure “Pop on screen” is on for reminders", Neon.Cyan, onClick = {
+                    context.startActivity(
+                        android.content.Intent(android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS)
+                            .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            .putExtra(android.provider.Settings.EXTRA_CHANNEL_ID, Reminders.CHANNEL)
+                    )
+                })
             }
         }
 
@@ -224,7 +231,7 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
         }
 
         SectionHeader("About", color = Neon.Faint)
-        OptionRow(Icons.Outlined.Info, "LifeDesk 4.1", "Everything in your life that has a date, payment or deadline", Neon.Muted)
+        OptionRow(Icons.Outlined.Info, "LifeDesk 4.2", "Everything in your life that has a date, payment or deadline", Neon.Muted)
         Text(
             "Documents are read on-device. Photos never leave your phone; with an account only your reminder list is backed up, privately.",
             style = MaterialTheme.typography.bodySmall, color = Neon.Faint, fontFamily = Mono, fontSize = 11.sp,

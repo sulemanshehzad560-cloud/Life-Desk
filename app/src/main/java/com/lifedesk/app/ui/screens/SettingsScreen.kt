@@ -33,6 +33,7 @@ import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.MarkEmailUnread
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.NotificationsActive
 import androidx.compose.material.icons.outlined.PersonRemove
 import androidx.compose.material.icons.outlined.Verified
@@ -204,6 +205,18 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
             OptionRow(Icons.Outlined.DeleteForever, "Delete all data", "Wipe this phone's LifeDesk", Neon.Red, onClick = { confirmClear = true })
         }
 
+        // ------------------------------------------------ hands-free voice
+        SectionHeader("Hands-free voice", color = Neon.Violet)
+        val voiceContext = androidx.compose.ui.platform.LocalContext.current
+        GlassCard(Modifier.fillMaxWidth(), glow = Neon.Violet, padding = 10.dp) {
+            OptionRow(Icons.Outlined.Mic, "Try a voice command", "“Remind me to pay DEWA 450 on Friday”", Neon.Violet, onClick = {
+                voiceContext.startActivity(android.content.Intent(voiceContext, com.lifedesk.app.voice.VoiceCommandActivity::class.java))
+            })
+            OptionRow(Icons.Outlined.Mic, "“Hey Google, open LifeDesk Voice”", "Works even when LifeDesk is closed", Neon.Cyan)
+            OptionRow(Icons.Outlined.Mic, "Quick Settings tile", "Swipe down → edit tiles → add “LifeDesk voice”", Neon.Cyan)
+            OptionRow(Icons.Outlined.Mic, "More ways in", "Widget mic · long-press app icon → Voice command · headset button", Neon.Muted)
+        }
+
         SectionHeader("Power tips", color = Neon.Pink)
         GlassCard(Modifier.fillMaxWidth(), glow = Neon.Pink, padding = 10.dp) {
             OptionRow(Icons.Outlined.DataObject, "Share to LifeDesk", "From Gmail, WhatsApp, Files: any email, PDF or photo", Neon.Pink)
@@ -211,7 +224,7 @@ fun SettingsScreen(vm: AppViewModel, nav: NavHostController) {
         }
 
         SectionHeader("About", color = Neon.Faint)
-        OptionRow(Icons.Outlined.Info, "LifeDesk 4.0", "Everything in your life that has a date, payment or deadline", Neon.Muted)
+        OptionRow(Icons.Outlined.Info, "LifeDesk 4.1", "Everything in your life that has a date, payment or deadline", Neon.Muted)
         Text(
             "Documents are read on-device. Photos never leave your phone; with an account only your reminder list is backed up, privately.",
             style = MaterialTheme.typography.bodySmall, color = Neon.Faint, fontFamily = Mono, fontSize = 11.sp,

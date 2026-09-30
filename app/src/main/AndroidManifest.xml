@@ -49,7 +49,53 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/pdf" />
             </intent-filter>
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
         </activity>
+
+        <!-- Hands-free voice panel: listens, runs the command, answers aloud and closes. -->
+        <activity
+            android:name=".voice.VoiceCommandActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:label="@string/voice_app_name"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.lifedesk.app.voice"
+            android:theme="@style/Theme.LifeDesk.Voice">
+            <!-- Headset / Bluetooth voice button -->
+            <intent-filter>
+                <action android:name="android.intent.action.VOICE_COMMAND" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <!-- Second launcher entry so "Hey Google, open LifeDesk Voice" goes straight to listening. -->
+        <activity-alias
+            android:name=".VoiceLauncher"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher"
+            android:label="@string/voice_app_name"
+            android:targetActivity=".voice.VoiceCommandActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <service
+            android:name=".voice.VoiceTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_mic"
+            android:label="@string/voice_tile"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.ACTIVE_TILE"
+                android:value="false" />
+        </service>
 
         <provider
             android:name="androidx.core.content.FileProvider"

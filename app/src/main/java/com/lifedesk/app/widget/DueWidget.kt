@@ -14,6 +14,7 @@ import com.lifedesk.app.domain.countdown
 import com.lifedesk.app.domain.isSnoozed
 import com.lifedesk.app.domain.money
 import com.lifedesk.app.domain.needsAttention
+import com.lifedesk.app.voice.VoiceCommandActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -65,6 +66,10 @@ class DueWidget : AppWidgetProvider() {
                     } ?: if (i == 0 && upcoming.isEmpty()) "Nothing coming up. Tap to add something." else "")
                 }
                 setOnClickPendingIntent(R.id.widget_root, open)
+                setOnClickPendingIntent(R.id.widget_mic, PendingIntent.getActivity(
+                    context, 1, Intent(context, VoiceCommandActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                ))
             }
             ids.forEach { manager.updateAppWidget(it, views) }
         }

@@ -29,6 +29,17 @@ UAE-first defaults (AED, day-first dates, UAE providers & documents); other GCC 
 
 Open the file on your Android phone (Android 8.0+) and allow "Install unknown apps" when asked.
 
+## New in 4.1 — hands-free voice
+
+Talk to LifeDesk without opening it. A small floating panel listens, carries out the command, **answers out loud**, posts a confirmation notification and closes.
+
+- **“Hey Google, open LifeDesk Voice”** — a second launcher entry that goes straight to listening.
+- **Quick Settings tile** (“LifeDesk voice”), **widget mic button**, long-press app icon → **Voice command**, and the **headset / Bluetooth voice button**.
+- Say things like: “remind me to pay DEWA 450 next Friday”, “mark credit card as paid”, “snooze car insurance for a week”, “when does my passport expire?”, “what's my briefing?”.
+- With **app lock** on, voice can still add and update items but won't read your data aloud.
+
+> Android doesn't let third-party apps keep the microphone open for a custom wake word, so LifeDesk uses Google Assistant and the shortcuts above as the “wake” step.
+
 ## New in 4.0 — futuristic upgrade
 
 - **AI briefing** on Home: a daily summary of what matters (payments this week with totals, upcoming renewals and price rises, expiring documents, savings) that types itself out and can be **read aloud**.

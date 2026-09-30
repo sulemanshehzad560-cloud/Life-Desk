@@ -7,14 +7,14 @@ plugins {
 
 android {
     namespace = "com.lifedesk.app"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.lifedesk.app"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 10
-        versionName = "4.2.2"
+        targetSdk = 36
+        versionCode = 11
+        versionName = "4.3.0"
         vectorDrawables { useSupportLibrary = true }
 
         // Firebase (accounts, password reset emails, cloud backup). Supplied at build time, e.g. from GitHub secrets.

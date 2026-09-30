@@ -11,7 +11,7 @@ jobs:
     permissions:
       contents: write
     env:
-      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      UPLOAD_PASSWORD: ${{ secrets.LIFEDESK_UPLOAD_PASSWORD }}
       # Accounts & cloud backup (Firebase). Optional: without them the app runs offline-only.
       FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
       FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
@@ -39,23 +39,28 @@ jobs:
           name: LifeDesk-debug-apk
           path: app/build/outputs/apk/debug/*.apk
 
-      # Optional signed release: add repository secrets KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD.
-      - name: Build signed release APK
-        if: ${{ env.KEYSTORE_BASE64 != '' }}
+      # Google Play build. The upload key is committed only in encrypted form (app/upload-keystore.jks.enc);
+      # add the repository secret LIFEDESK_UPLOAD_PASSWORD to unlock it. Without the secret this step is skipped.
+      - name: Build signed Play Store bundle (AAB) and release APK
+        if: ${{ env.UPLOAD_PASSWORD != '' }}
         env:
-          LIFEDESK_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          LIFEDESK_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          LIFEDESK_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          UPLOAD_PASSWORD: ${{ secrets.LIFEDESK_UPLOAD_PASSWORD }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
-          LIFEDESK_KEYSTORE="$RUNNER_TEMP/release.jks" ./gradlew assembleRelease --stacktrace
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in app/upload-keystore.jks.enc \
+            -out "$RUNNER_TEMP/upload.jks" -pass env:UPLOAD_PASSWORD
+          export LIFEDESK_KEYSTORE="$RUNNER_TEMP/upload.jks" LIFEDESK_KEY_ALIAS=upload
+          export LIFEDESK_KEYSTORE_PASSWORD="$UPLOAD_PASSWORD" LIFEDESK_KEY_PASSWORD="$UPLOAD_PASSWORD"
+          ./gradlew bundleRelease assembleRelease --stacktrace
+          rm -f "$RUNNER_TEMP/upload.jks"
 
-      - name: Upload release APK
-        if: ${{ hashFiles('app/build/outputs/apk/release/*.apk') != '' }}
+      - name: Upload Play Store files
+        if: ${{ hashFiles('app/build/outputs/bundle/release/*.aab') != '' }}
         uses: actions/upload-artifact@v4
         with:
-          name: LifeDesk-release-apk
-          path: app/build/outputs/apk/release/*.apk
+          name: LifeDesk-play-store
+          path: |
+            app/build/outputs/bundle/release/*.aab
+            app/build/outputs/apk/release/*.apk
 
       # Every push to main publishes/updates the GitHub Release "v<versionName>" (from app/build.gradle.kts).
       # Bump versionName to cut a new release; pushing a v* tag works too.
@@ -75,8 +80,9 @@ jobs:
           mkdir -p dist
           # Stable name so https://github.com/<owner>/<repo>/releases/latest/download/LifeDesk.apk always works.
           cp app/build/outputs/apk/debug/app-debug.apk dist/LifeDesk.apk
-          if ls app/build/outputs/apk/release/*.apk >/dev/null 2>&1; then
-            cp app/build/outputs/apk/release/*.apk dist/LifeDesk-signed.apk
+          if ls app/build/outputs/bundle/release/*.aab >/dev/null 2>&1; then
+            cp app/build/outputs/bundle/release/*.aab dist/LifeDesk-playstore.aab
+            cp app/build/outputs/apk/release/*.apk dist/LifeDesk-release.apk
           fi
 
       - name: Publish GitHub release
@@ -87,7 +93,9 @@ jobs:
           target_commitish: ${{ github.sha }}
           name: LifeDesk ${{ steps.version.outputs.tag }}
           make_latest: true
-          files: dist/*.apk
+          files: |
+            dist/*.apk
+            dist/*.aab
           body: |
             **LifeDesk** — everything in your life that has a date, payment or deadline.
 
@@ -97,3 +105,5 @@ jobs:
             3. Tap **Install**, open LifeDesk, continue with your Google account and scan your first document.
 
             Requires Android 8.0 or newer. Documents are processed on your phone.
+
+            **LifeDesk-playstore.aab** (when present) is the signed bundle to upload in Google Play Console.

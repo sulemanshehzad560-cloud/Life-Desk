@@ -111,14 +111,28 @@ class Accounts(private val context: Context) {
 
     suspend fun signInWithGoogle(activity: Activity) = guard {
         if (!googleEnabled) throw AuthException("Google sign-in isn't configured in this build.")
-        val option = GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_WEB_CLIENT_ID).build()
-        val request = GetCredentialRequest.Builder().addCredentialOption(option).build()
+        val manager = CredentialManager.create(activity)
+        suspend fun ask(option: androidx.credentials.CredentialOption) =
+            manager.getCredential(activity, GetCredentialRequest.Builder().addCredentialOption(option).build())
         val response = try {
-            CredentialManager.create(activity).getCredential(activity, request)
-        } catch (e: GetCredentialCancellationException) {
-            throw AuthException("Sign-in cancelled.")
-        } catch (e: NoCredentialException) {
-            throw AuthException("No Google account found on this phone.")
+            ask(GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_WEB_CLIENT_ID).build())
+        } catch (first: Exception) {
+            // Google often reports a rejected app (e.g. unregistered signing key) as a "cancellation".
+            // Retry once with the account bottom sheet, then surface Google's own reason.
+            if (first is GetCredentialCancellationException &&
+                (first.message.isNullOrBlank() || first.message!!.contains("cancelled by the user", ignoreCase = true))
+            ) throw AuthException("Sign-in cancelled.")
+            try {
+                ask(
+                    com.google.android.libraries.identity.googleid.GetGoogleIdOption.Builder()
+                        .setServerClientId(BuildConfig.GOOGLE_WEB_CLIENT_ID)
+                        .setFilterByAuthorizedAccounts(false)
+                        .setAutoSelectEnabled(false)
+                        .build()
+                )
+            } catch (second: Exception) {
+                throw AuthException(googleError(first, second))
+            }
         }
         val credential = response.credential
         if (credential !is CustomCredential || credential.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL) {
@@ -127,6 +141,17 @@ class Accounts(private val context: Context) {
         val token = GoogleIdTokenCredential.createFrom(credential.data).idToken
         requireAuth().signInWithCredential(GoogleAuthProvider.getCredential(token, null)).await()
         refresh()
+    }
+
+    private fun googleError(first: Exception, second: Exception): String {
+        val detail = listOfNotNull(first.message, second.message).distinct().joinToString(" / ")
+        val keyProblem = Regex("\\[(10|16|28444)]|reauth|developer console|not set up", RegexOption.IGNORE_CASE).containsMatchIn(detail)
+        return when {
+            keyProblem -> "Google rejected this app's signing key. Add the app's SHA-1 in Firebase (Android app com.lifedesk.app), wait 10 minutes and retry. ($detail)"
+            second is NoCredentialException -> "No Google account found on this phone. ($detail)"
+            second is GetCredentialCancellationException -> "Sign-in cancelled. ($detail)"
+            else -> "Google sign-in failed: ${detail.ifBlank { second.javaClass.simpleName }}"
+        }
     }
 
     fun signOut() {
